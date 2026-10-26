@@ -103,7 +103,7 @@ tr.click{cursor:pointer}tr.click:hover td{background:#fffbea}
       <label>Base / Empresa / Ruta</label><input id="a-base" placeholder="Ej. Base de taxis Centro">
       <div class="row">
         <div><label>Tipo de cliente</label><select id="a-tipo"><option>Taxi</option><option>Microbús</option><option>Colectiva</option><option>Flotilla</option><option>Particular</option><option>Otro</option></select></div>
-        <div><label>Tipo de precio</label><select id="a-precio"><option>Precio público</option><option>Mayoreo</option></select></div>
+        <div><label>Lista de precios</label><select id="a-precio"><option>Cliente Frecuente (32% lub/acum/moto)</option><option>Especial autorizado</option></select></div>
       </div>
       <div class="row">
         <div><label>No. de unidades</label><input type="number" id="a-unid" min="0"></div>
@@ -153,7 +153,7 @@ tr.click{cursor:pointer}tr.click:hover td{background:#fffbea}
       </div>
       <div id="k-fac-w"><label>Folio de factura donde se aplica</label><input id="k-fac" style="text-transform:uppercase"></div>
       <div id="k-art-w" style="display:none"><label>Artículo</label>
-        <select id="k-art"><option>Gorra</option><option>Playera</option><option>Termo</option><option>Llavero</option><option>Otro</option></select></div>
+        <select id="k-art" onchange="artPts()"></select><div class="muted">Puntos de ejemplo; se pueden ajustar al capturar.</div></div>
       <label>Puntos a utilizar</label>
       <div style="display:flex;gap:8px"><input type="number" step="0.01" id="k-pts" oninput="calcSaldo()"><button class="btn o" onclick="usarTodo()">Todo</button></div>
       <div class="calc">Saldo después del canje: <b id="k-rest">—</b></div>
@@ -216,7 +216,19 @@ tr.click{cursor:pointer}tr.click:hover td{background:#fffbea}
 
 <script>
 /* ====== CONFIGURA AQUÍ LA URL DE TU APPS SCRIPT ====== */
-const API_URL = 'PEGA_AQUI_TU_URL_DE_APPS_SCRIPT/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbwDeFwj4W8EBWeZP0o-IVuiTODuGP5rN8HWM4pdPiP1RAU5s8bFCs5rdlHbHONrfDaeOw/exec';
+
+/* Catálogo de artículos promocionales: puntos de EJEMPLO, ajústalos cuando tengan los costos reales */
+const ARTICULOS = [
+  {nombre:'Llavero', puntos:30},
+  {nombre:'Gorra', puntos:100},
+  {nombre:'Playera', puntos:150},
+  {nombre:'Termo', puntos:200},
+  {nombre:'Otro', puntos:0}
+];
+
+/* Descuentos especiales de la tarjeta Cliente Frecuente */
+const DESCUENTOS = 'Lubricantes 32% · Acumuladores 32% · Motobaterías 32% · Llantas: precio especial a consultar';
 
 let DB = {vendedores:[],clientes:[],movimientos:[],config:{porcentaje:.01,comprasMinCanje:2}};
 const $ = id => document.getElementById(id);
@@ -327,7 +339,7 @@ async function altaCliente(){
     base:$('a-base').value,tipoCliente:$('a-tipo').value,tipoPrecio:$('a-precio').value,unidades:$('a-unid').value,notas:$('a-notas').value};
   const r=await post(d,$('b-alta')); if(!r) return;
   const c=cli(r.folio);
-  const msg=`¡Hola ${c.Nombre}! 👋\nBienvenido al sistema de recompensas de *Grupo Llanterama*.\n\nTu tarjeta Cliente Frecuente es la *${c.Folio}*.\nCompra, acumula puntos y canjéalos por artículos promocionales o paga tus próximas compras.\n\nPor cada compra acumulas el 1% en puntos. Solo pide en el punto de venta que registren tu compra.`+firma(c);
+  const msg=`¡Hola ${c.Nombre}! 👋\nBienvenido al sistema de recompensas de *Grupo Llanterama*.\n\nTu tarjeta Cliente Frecuente es la *${c.Folio}*.\nCompra, acumula puntos y canjéalos por artículos promocionales o paga tus próximas compras.\n\nPor cada compra acumulas el 1% en puntos. Solo pide en el punto de venta que registren tu compra.\n\nAdemás, con tu tarjeta tienes descuentos especiales:\n${DESCUENTOS.split(' · ').map(x=>'• '+x).join('\n')}`+firma(c);
   $('a-wa').innerHTML=waBox(c.Telefono,msg);
   ['a-nombre','a-tel','a-base','a-unid','a-notas'].forEach(i=>$(i).value='');
 }
@@ -339,7 +351,7 @@ function infoCli(p){
   const e=estadoCli(c.Folio);
   const puede = e.compras>=DB.config.comprasMinCanje;
   box.innerHTML=`<div class="cli-box"><b>${c.Nombre}</b> · ${c.Telefono}<br>${c['Base / Empresa']||''} ${c['Tipo Cliente']?'· '+c['Tipo Cliente']:''} · ${c['Tipo Precio']||''}<br>
-  Vendedor: ${c.Vendedor}<br>Compras: <b>${e.compras}</b> · Facturado: <b>${money(e.facturado)}</b><br>Saldo: <b style="font-size:16px">${num(e.saldo)} pts</b>
+  Vendedor: ${c.Vendedor}<br><span class="muted">${DESCUENTOS}</span><br>Compras: <b>${e.compras}</b> · Facturado: <b>${money(e.facturado)}</b><br>Saldo: <b style="font-size:16px">${num(e.saldo)} pts</b>
   ${p==='k'&&!puede?`<br><span style="color:var(--red);font-weight:600">⚠ Podrá canjear a partir de su compra #${DB.config.comprasMinCanje}</span>`:''}</div>`;
   if(p==='k') calcSaldo();
 }
@@ -352,7 +364,8 @@ async function regCompra(){
   $('c-wa').innerHTML=waBox(c.Telefono,msg);
   $('c-fac').value=''; $('c-imp').value=''; calcPts();
 }
-function tipoCanje(){ const t=document.querySelector('[name=k-tipo]:checked').value; $('k-fac-w').style.display=t==='Compra'?'':'none'; $('k-art-w').style.display=t==='Compra'?'none':''; }
+function tipoCanje(){ const t=document.querySelector('[name=k-tipo]:checked').value; $('k-fac-w').style.display=t==='Compra'?'':'none'; $('k-art-w').style.display=t==='Compra'?'none':''; if(t!=='Compra') artPts(); }
+function artPts(){ const a=ARTICULOS.find(x=>x.nombre===$('k-art').value); if(a&&a.puntos){$('k-pts').value=a.puntos;} calcSaldo(); }
 function usarTodo(){ const c=cli($('k-folio').value); if(c){$('k-pts').value=estadoCli(c.Folio).saldo; calcSaldo();} }
 function calcSaldo(){ const c=cli($('k-folio').value); $('k-rest').textContent=c?num(estadoCli(c.Folio).saldo-Number($('k-pts').value||0)):'—'; }
 async function regCanje(){
@@ -438,6 +451,7 @@ function exportar(t){
 
 /* ---------- INIT ---------- */
 ['a-fecha','c-fecha','k-fecha'].forEach(i=>$(i).value=hoy());
+$('k-art').innerHTML=ARTICULOS.map(a=>`<option value="${a.nombre}">${a.nombre}${a.puntos?' · '+a.puntos+' pts':''}</option>`).join('');
 $('k-folio').addEventListener('change',()=>infoCli('k'));
 cargar();
 </script>
