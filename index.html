@@ -101,6 +101,7 @@ tr.click{cursor:pointer}tr.click:hover td{background:#fffbea}
         <div><label>Fecha de entrega</label><input type="date" id="a-fecha"></div>
       </div>
       <label>Base / Empresa / Ruta</label><input id="a-base" placeholder="Ej. Base de taxis Centro">
+      <label>Código de cliente (punto de venta) <span style="font-weight:400">· opcional, se puede agregar después</span></label><input id="a-cod" style="text-transform:uppercase">
       <div class="row">
         <div><label>Tipo de cliente</label><select id="a-tipo"><option>Taxi</option><option>Microbús</option><option>Colectiva</option><option>Flotilla</option><option>Particular</option><option>Otro</option></select></div>
         <div><label>Lista de precios</label><select id="a-precio"><option>Cliente Frecuente (32% lub/acum/moto)</option><option>Especial autorizado</option></select></div>
@@ -169,7 +170,7 @@ tr.click{cursor:pointer}tr.click:hover td{background:#fffbea}
     <div class="filters">
       <div><label>Buscar</label><input id="f-cli" placeholder="Nombre, folio, teléfono, base" oninput="tablaClientes()"></div>
       <div><label>Vendedor</label><select id="f-cli-v" onchange="tablaClientes()"></select></div>
-      <div><label>Estado</label><select id="f-cli-e" onchange="tablaClientes()"><option value="">Todos</option><option value="sin">Sin compras</option><option value="act">Con compras</option><option value="saldo">Con saldo</option></select></div>
+      <div><label>Estado</label><select id="f-cli-e" onchange="tablaClientes()"><option value="">Todos</option><option value="sin">Sin compras</option><option value="act">Con compras</option><option value="saldo">Con saldo</option><option value="nocod">Sin código de cliente</option></select></div>
       <button class="btn o" onclick="exportar('clientes')">⬇ CSV</button>
     </div>
     <div class="tw"><table id="tb-cli"></table></div>
@@ -336,12 +337,12 @@ function sugerirFolio(){
 async function altaCliente(){
   if(!$('usuario').value) return toast('Selecciona quién registra (arriba a la derecha)',true);
   const d={action:'registrarCliente',folio:$('a-folio').value,nombre:$('a-nombre').value,telefono:$('a-tel').value,fecha:$('a-fecha').value,
-    base:$('a-base').value,tipoCliente:$('a-tipo').value,tipoPrecio:$('a-precio').value,unidades:$('a-unid').value,notas:$('a-notas').value};
+    base:$('a-base').value,codigo:$('a-cod').value,tipoCliente:$('a-tipo').value,tipoPrecio:$('a-precio').value,unidades:$('a-unid').value,notas:$('a-notas').value};
   const r=await post(d,$('b-alta')); if(!r) return;
   const c=cli(r.folio);
   const msg=`¡Hola ${c.Nombre}! 👋\nBienvenido al sistema de recompensas de *Grupo Llanterama*.\n\nTu tarjeta Cliente Frecuente es la *${c.Folio}*.\nCompra, acumula puntos y canjéalos por artículos promocionales o paga tus próximas compras.\n\nPor cada compra acumulas el 1% en puntos. Solo pide en el punto de venta que registren tu compra.\n\nAdemás, con tu tarjeta tienes descuentos especiales:\n${DESCUENTOS.split(' · ').map(x=>'• '+x).join('\n')}`+firma(c);
   $('a-wa').innerHTML=waBox(c.Telefono,msg);
-  ['a-nombre','a-tel','a-base','a-unid','a-notas'].forEach(i=>$(i).value='');
+  ['a-nombre','a-tel','a-base','a-cod','a-unid','a-notas'].forEach(i=>$(i).value='');
 }
 
 /* ---------- COMPRA / CANJE ---------- */
@@ -386,9 +387,9 @@ function tablaClientes(){
   const q=$('f-cli').value.toLowerCase(), v=$('f-cli-v').value, e=$('f-cli-e').value;
   CLI_ROWS=DB.clientes.map(c=>({...c,...estadoCli(c.Folio)})).filter(c=>
     (!v||c.Prefijo===v) && (!q||[c.Folio,c.Nombre,c.Telefono,c['Base / Empresa']].join(' ').toLowerCase().includes(q)) &&
-    (!e||(e==='sin'&&!c.compras)||(e==='act'&&c.compras)||(e==='saldo'&&c.saldo>0)));
-  $('tb-cli').innerHTML='<tr><th>Folio</th><th>Cliente</th><th>Teléfono</th><th>Base</th><th>Tipo</th><th>Precio</th><th>Vendedor</th><th>Alta</th><th class="n">Compras</th><th class="n">Facturado</th><th class="n">Ganados</th><th class="n">Usados</th><th class="n">Saldo</th><th>Última compra</th></tr>'+
-  CLI_ROWS.map(c=>`<tr class="click" onclick="detalle('${c.Folio}')"><td><b>${c.Folio}</b></td><td>${c.Nombre}</td><td>${c.Telefono}</td><td>${c['Base / Empresa']||''}</td><td>${c['Tipo Cliente']||''}</td><td>${c['Tipo Precio']||''}</td><td>${c.Prefijo}</td><td>${fdate(c['Fecha Alta'])}</td><td class="n">${c.compras}</td><td class="n">${money(c.facturado)}</td><td class="n">${num(c.ganados)}</td><td class="n">${num(c.usados)}</td><td class="n"><b>${num(c.saldo)}</b></td><td>${fdate(c.ultima)}</td></tr>`).join('');
+    (!e||(e==='sin'&&!c.compras)||(e==='act'&&c.compras)||(e==='saldo'&&c.saldo>0)||(e==='nocod'&&!c['Código Cliente'])));
+  $('tb-cli').innerHTML='<tr><th>Folio</th><th>Código</th><th>Cliente</th><th>Teléfono</th><th>Base</th><th>Tipo</th><th>Precio</th><th>Vendedor</th><th>Alta</th><th class="n">Compras</th><th class="n">Facturado</th><th class="n">Ganados</th><th class="n">Usados</th><th class="n">Saldo</th><th>Última compra</th></tr>'+
+  CLI_ROWS.map(c=>`<tr class="click" onclick="detalle('${c.Folio}')"><td><b>${c.Folio}</b></td><td>${c['Código Cliente']||'<span class="pill p-x">Pendiente</span>'}</td><td>${c.Nombre}</td><td>${c.Telefono}</td><td>${c['Base / Empresa']||''}</td><td>${c['Tipo Cliente']||''}</td><td>${c['Tipo Precio']||''}</td><td>${c.Prefijo}</td><td>${fdate(c['Fecha Alta'])}</td><td class="n">${c.compras}</td><td class="n">${money(c.facturado)}</td><td class="n">${num(c.ganados)}</td><td class="n">${num(c.usados)}</td><td class="n"><b>${num(c.saldo)}</b></td><td>${fdate(c.ultima)}</td></tr>`).join('');
 }
 function filtroFecha(m,d,h){ return (!d||m.Fecha>=d)&&(!h||m.Fecha<=h); }
 function tablaMovs(){
@@ -410,11 +411,21 @@ function detalle(folio){
   let s=0;
   $('modal-c').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:start"><h2>${c.Folio} · ${c.Nombre}</h2><button class="btn o sm" onclick="$('modal').classList.remove('on')">✕</button></div>
   <div class="cli-box">📱 ${c.Telefono} · ${c['Base / Empresa']||'—'} · ${c['Tipo Cliente']||''} · ${c['Tipo Precio']||''} · ${c.Unidades||'?'} unidades<br>Alta: ${fdate(c['Fecha Alta'])} · Vendedor: ${c.Vendedor} · Asesor: ${v?.Asesor||''}</div>
+  <div class="row" style="margin-top:10px;align-items:end">
+    <div><label>Código de cliente (punto de venta)</label><input id="e-cod" value="${c['Código Cliente']||''}" style="text-transform:uppercase"></div>
+    <div><label>Teléfono</label><input id="e-tel" value="${c.Telefono}" maxlength="10"></div>
+  </div>
+  <button class="btn sm" style="margin-top:8px" onclick="guardarCli('${folio}',this)">Guardar cambios</button>
   <div class="kpis" style="margin-top:14px">${[[e.compras,'Compras'],[money(e.facturado),'Facturado'],[num(e.ganados),'Pts ganados'],[num(e.usados),'Pts usados'],[num(e.saldo),'Saldo']].map(([b,x])=>`<div class="kpi"><b>${b}</b><span>${x}</span></div>`).join('')}</div>
   <div class="tw"><table><tr><th>Fecha</th><th>Tipo</th><th>Factura</th><th class="n">Importe</th><th class="n">Puntos</th><th>Detalle</th><th class="n">Saldo</th></tr>
   ${ms.map(m=>{ if(!m.Tipo.startsWith('ANULADO')) s=r2(s+Number(m.Puntos)); return `<tr><td>${fdate(m.Fecha)}</td><td>${pill(m.Tipo)}</td><td>${m['Folio Factura']||''}</td><td class="n">${m.Importe?money(m.Importe):''}</td><td class="n">${num(m.Puntos)}</td><td>${m['Tipo Canje']||''} ${m['Artículo']||''}</td><td class="n"><b>${num(s)}</b></td></tr>`;}).join('')}</table></div>
   <br>${waBox(c.Telefono,`Hola ${c.Nombre}, te compartimos tu estado de cuenta *Cliente Frecuente Grupo Llanterama* (${c.Folio}):\n\nCompras: ${e.compras}\nPuntos acumulados: ${num(e.ganados)}\nPuntos utilizados: ${num(e.usados)}\n*Saldo disponible: ${num(e.saldo)} puntos*`+firma(c))}`;
   $('modal').classList.add('on');
+}
+
+async function guardarCli(folio,btn){
+  const r=await post({action:'actualizarCliente',folio,codigo:$('e-cod').value,telefono:$('e-tel').value},btn);
+  if(r) detalle(folio);
 }
 
 /* ---------- REPORTES ---------- */
