@@ -232,7 +232,8 @@ tr.click{cursor:pointer}tr.click:hover td{background:#fffbea}
     <p class="muted" style="margin-bottom:12px">Pega el reporte de ventas en la hoja correspondiente del Sheet y presiona Conciliar. Cruza por folio de factura y código de cliente.</p>
     <div class="filters">
       <button class="btn" id="b-concil" onclick="conciliar()">⚖ Conciliar</button>
-      <div><label>Estado</label><select id="f-co-e" onchange="tablaConcil()"><option value="">Todos</option><option value="OK">✅ Cuadra</option><option value="DIFERENCIA">⚠️ Diferencia</option><option value="NO_ENCONTRADA">❌ No existe en PV</option><option value="NO_REGISTRADA">🔍 No registrada</option></select></div>
+      <button class="btn y" id="b-todas" onclick="registrarTodas()">✔ Registrar todas las no registradas</button>
+      <div><label>Estado</label><select id="f-co-e" onchange="tablaConcil()"><option value="">Todos</option><option value="OK">✅ Cuadra</option><option value="DIFERENCIA">⚠️ Diferencia</option><option value="NO_ENCONTRADA">❌ No existe en PV</option><option value="NO_REGISTRADA">🔍 No registrada</option><option value="ANTES_ALTA">🕓 Antes de la tarjeta</option><option value="SIN_VENTAS">∅ Sin ventas en BD</option></select></div>
       <div><label>Vendedor</label><select id="f-co-v" onchange="tablaConcil()"></select></div>
       <button class="btn o" onclick="exportar('concil')">⬇ CSV</button>
     </div>
@@ -279,6 +280,7 @@ $('nav').onclick = e => {
   const t = e.target.dataset.t; if(!t) return;
   document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
   document.querySelectorAll('.tab').forEach(s=>s.classList.toggle('on',s.id==='t-'+t));
+  if(t==='concil') conciliar();
 };
 
 function toast(m, err){ const t=$('toast'); t.textContent=m; t.className='toast'+(err?' err':''); t.style.display='block'; clearTimeout(t._t); t._t=setTimeout(()=>t.style.display='none',4000); }
@@ -524,7 +526,7 @@ async function enviarPend(i,btn){
 
 /* ---------- CONCILIACIÓN ---------- */
 let CONCIL=[], CO_ROWS=[], CO_INFO={};
-const CO_EST={OK:['✅ Cuadra','p-c'],DIFERENCIA:['⚠️ Diferencia','p-a'],NO_ENCONTRADA:['❌ No existe en PV','p-x'],NO_REGISTRADA:['🔍 No registrada','p-x']};
+const CO_EST={OK:['✅ Cuadra','p-c'],DIFERENCIA:['⚠️ Diferencia','p-a'],NO_ENCONTRADA:['❌ No existe en PV','p-x'],NO_REGISTRADA:['🔍 No registrada','p-x'],ANTES_ALTA:['🕓 Antes de la tarjeta','p-a'],SIN_VENTAS:['∅ Sin ventas en BD','p-a']};
 async function conciliar(){
   const b=$('b-concil'); b.disabled=true; b.textContent='Conciliando…';
   try{
@@ -546,6 +548,14 @@ function tablaConcil(){
   CO_ROWS.map((x,i)=>`<tr><td><span class="pill ${CO_EST[x.estado][1]}">${CO_EST[x.estado][0]}</span></td><td><b>${x.folio}</b></td><td>${x.cliente}</td><td>${x.codigo||''}</td><td>${x.bd}</td><td>${x.factura}</td><td>${fdate(x.fechaReg)}</td><td>${fdate(x.fechaPV)}</td><td class="n">${x.importeReg!=null?money(x.importeReg):''}</td><td class="n">${x.importePV!=null?money(x.importePV):''}</td><td style="white-space:normal;min-width:220px">${x.detalle}</td><td>${
     x.estado==='NO_REGISTRADA'?`<button class="btn sm" onclick="coRegistrar(${i})">Registrar</button>`:
     x.estado==='NO_ENCONTRADA'||x.estado==='DIFERENCIA'?`<button class="btn o sm" onclick="anular('${x.id}')">Anular</button>`:''}</td></tr>`).join('');
+}
+async function registrarTodas(){
+  if(!$('usuario').value) return toast('Selecciona quién registra',true);
+  const n=CONCIL.filter(x=>x.estado==='NO_REGISTRADA').length;
+  if(!n) return toast('Primero presiona Conciliar; no hay compras pendientes',true);
+  if(!confirm(`Se registrarán ${n} compras con su 1% de puntos. ¿Continuar?`)) return;
+  const r=await post({action:'registrarTodas'},$('b-todas'));
+  if(r){ if(r.errores?.length) alert('Con error:\n'+r.errores.join('\n')); conciliar(); }
 }
 function coRegistrar(i){
   const x=CO_ROWS[i], c=cli(x.folio);
