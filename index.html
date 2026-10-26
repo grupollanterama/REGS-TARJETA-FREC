@@ -82,7 +82,6 @@ body:has(#t-clientes.on) main{max-width:none}
   <button data-t="movs">Movimientos</button>
   <button data-t="reportes">Reportes</button>
   <button data-t="concil">Conciliación</button>
-  <button data-t="pend">WhatsApp pendientes <span id="pend-n" class="pill p-x"></span></button>
 </nav>
 
 <main>
@@ -120,10 +119,11 @@ body:has(#t-clientes.on) main{max-width:none}
         <div><label>Notas</label><input id="a-notas"></div>
       </div>
       <br><button class="btn" id="b-alta" onclick="altaCliente()">Registrar tarjeta</button>
+      <div id="alta-lock" class="cli-box" style="display:none;background:#fee2e2;color:#991b1b;font-weight:700">⚠️ Envía el mensaje de bienvenida al cliente (o cópialo) para poder registrar otra tarjeta.</div>
     </div>
     <div class="card">
       <h2>2. Bienvenida por WhatsApp</h2>
-      <p class="muted">Al registrar, se genera el mensaje de bienvenida listo para enviar.</p>
+      <p class="muted"><b>Obligatorio:</b> al registrar, envía este mensaje al cliente en ese momento, frente a él, para confirmar que su número es correcto.</p>
       <div id="a-wa"></div>
     </div>
   </div>
@@ -332,8 +332,22 @@ function waBox(tel, msg, estado, ref, id){
   if(estado && estado.startsWith('ENVIADO'))
     return `<div class="cli-box" style="background:#dcfce7;color:#166534;font-weight:700">✅ WhatsApp enviado automáticamente al cliente</div><div class="wa">${msg.replace(/</g,'&lt;')}</div>`;
   const aviso = estado ? `<div class="cli-box" style="background:#fff8dd">⚠️ ${estado.startsWith('ERROR')?'No se pudo enviar automáticamente: '+estado:'Envío automático aún no activado'} — envíalo con el botón.</div>` : '';
-  return `${aviso}<div class="wa">${msg.replace(/</g,'&lt;')}</div><br><a class="btn g" href="${url}" target="_blank" onclick="marcarEnviado('${ref||''}','${id||''}')" style="text-decoration:none;display:inline-block">Enviar por WhatsApp</a>`;
+  WA_MSGS.push(msg); const k=WA_MSGS.length-1;
+  return `${aviso}<div class="wa">${msg.replace(/</g,'&lt;')}</div><br><div style="display:flex;gap:8px;flex-wrap:wrap">
+    <a class="btn g" href="${url}" target="_blank" onclick="waHecho('${ref||''}','${id||''}')" style="text-decoration:none;display:inline-block">📲 Enviar por WhatsApp</a>
+    <button class="btn o" onclick="copiarMsg(${k},'${ref||''}','${id||''}',this)">📋 Copiar mensaje</button></div>`;
 }
+const WA_MSGS=[];
+async function copiarMsg(k,ref,id,btn){
+  try{ await navigator.clipboard.writeText(WA_MSGS[k]); }
+  catch(e){ const t=document.createElement('textarea'); t.value=WA_MSGS[k]; document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove(); }
+  btn.textContent='✅ Copiado'; waHecho(ref,id);
+}
+function waHecho(ref,id){
+  marcarEnviado(ref,id);
+  if(ref==='CLI'){ ALTA_PEND=false; $('b-alta').disabled=false; $('alta-lock').style.display='none'; }
+}
+let ALTA_PEND=false;
 const ultimoMov = folio => [...DB.movimientos].reverse().find(m=>m.Folio===folio)?.ID;
 function msgBienvenida(c){
   return `¡Hola ${c.Nombre}! 👋\nBienvenido al sistema de recompensas de *Grupo Llanterama*.\n\nTu tarjeta Cliente Frecuente es la *${c.Folio}*.\nCompra, acumula puntos y canjéalos por artículos promocionales o paga tus próximas compras.\n\nPor cada compra acumulas el 1% en puntos. Solo pide en el punto de venta que registren tu compra.\n\nAdemás, con tu tarjeta tienes descuentos especiales:\n${DESCUENTOS.split(' · ').map(x=>'• '+x).join('\n')}\n\n📲 *Promociones del mes:* escanea el código QR de tu tarjeta o entra aquí:\n${PROMO_URL}\n\n⭐ *Consulta tus puntos cuando quieras:*\n${CONSULTA_URL}?f=${c.Folio}\n(te pedirá los últimos 4 dígitos de tu teléfono)`+firma(c);
@@ -357,7 +371,7 @@ function render(){
   u.innerHTML='<option value="">¿Quién registra?</option>'+asesores.map(a=>`<option>${a}</option>`).join('')+'<option>Administración</option>';
   u.value=uv;
   $('dl-folios').innerHTML = DB.clientes.map(c=>`<option value="${c.Folio} · ${c.Nombre}">`).join('');
-  resumen(); tablaClientes(); tablaMovs(); reportes(); tablaPend();
+  resumen(); tablaClientes(); tablaMovs(); reportes();
   infoCli('c'); infoCli('k');
 }
 $('usuario').onchange=e=>{localStorage.setItem('cf-user',e.target.value); tablaMovs(); if(CONCIL.length) tablaConcil();};
@@ -390,6 +404,7 @@ function sugerirFolio(){
   $('a-hint').textContent = `${usados.length} de ${v.Cantidad} tarjetas registradas · rango ${p}-001 a ${p}-${String(v.Cantidad).padStart(3,'0')}`;
 }
 async function altaCliente(){
+  if(ALTA_PEND) return toast('Primero envía o copia el mensaje de bienvenida del cliente anterior',true);
   if(!$('usuario').value) return toast('Selecciona quién registra (arriba a la derecha)',true);
   if(!confirm(`¿Confirmas que entregaste la tarjeta ${$('a-folio').value}?`)) return;
   const d={action:'registrarCliente',prefijo:$('a-vend').value,nombre:$('a-nombre').value,telefono:$('a-tel').value,fecha:$('a-fecha').value,
@@ -398,6 +413,7 @@ async function altaCliente(){
   const c=cli(r.folio);
   const msg=msgBienvenida(c);
   $('a-wa').innerHTML=waBox(c.Telefono,msg,r.wa,'CLI',c.Folio);
+  if(!String(r.wa||'').startsWith('ENVIADO')){ ALTA_PEND=true; $('b-alta').disabled=true; $('alta-lock').style.display='block'; $('a-wa').scrollIntoView({behavior:'smooth'}); }
   ['a-nombre','a-tel','a-base','a-cod','a-unid','a-notas'].forEach(i=>$(i).value='');
 }
 
@@ -580,6 +596,7 @@ function exportar(t){
 }
 
 /* ---------- INIT ---------- */
+window.addEventListener('beforeunload',e=>{ if(ALTA_PEND){ e.preventDefault(); e.returnValue=''; } });
 ['a-fecha','c-fecha','k-fecha'].forEach(i=>$(i).value=hoy());
 $('k-art').innerHTML=ARTICULOS.map(a=>`<option value="${a.nombre}">${a.nombre}${a.puntos?' · '+a.puntos+' pts':''}</option>`).join('');
 $('k-folio').addEventListener('change',()=>infoCli('k'));
