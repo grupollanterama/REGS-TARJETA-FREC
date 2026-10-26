@@ -75,6 +75,7 @@ tr.click{cursor:pointer}tr.click:hover td{background:#fffbea}
   <button data-t="clientes">Clientes</button>
   <button data-t="movs">Movimientos</button>
   <button data-t="reportes">Reportes</button>
+  <button data-t="concil">Conciliación</button>
 </nav>
 
 <main>
@@ -197,7 +198,7 @@ tr.click{cursor:pointer}tr.click:hover td{background:#fffbea}
     <div class="filters">
       <div><label>Desde</label><input type="date" id="f-r-d" onchange="reportes()"></div>
       <div><label>Hasta</label><input type="date" id="f-r-h" onchange="reportes()"></div>
-      <div><label>Zona</label><select id="f-r-z" onchange="reportes()"><option value="">Todas</option><option>Tulancingo</option><option>Poza Rica</option></select></div>
+      <div><label>Zona</label><select id="f-r-z" onchange="reportes()"><option value="">Todas</option><option>Tulancingo</option><option>Autoeléctrica</option><option>Poza Rica</option></select></div>
       <button class="btn o" onclick="exportar('rep')">⬇ CSV</button>
     </div>
     <div class="kpis" id="r-kpis"></div>
@@ -207,6 +208,21 @@ tr.click{cursor:pointer}tr.click:hover td{background:#fffbea}
   <div class="grid g2">
     <div class="card"><h2>Top clientes por facturación</h2><div class="tw" style="max-height:380px"><table id="tb-top"></table></div></div>
     <div class="card"><h2>Canjes por tipo / artículo</h2><div class="tw" style="max-height:380px"><table id="tb-canjes"></table></div></div>
+  </div>
+</section>
+<!-- CONCILIACIÓN -->
+<section class="tab" id="t-concil">
+  <div class="card">
+    <h2>Conciliación contra punto de venta (BDTUL · BDAUT · BDPZ)</h2>
+    <p class="muted" style="margin-bottom:12px">Pega el reporte de ventas en la hoja correspondiente del Sheet y presiona Conciliar. Cruza por folio de factura y código de cliente.</p>
+    <div class="filters">
+      <button class="btn" id="b-concil" onclick="conciliar()">⚖ Conciliar</button>
+      <div><label>Estado</label><select id="f-co-e" onchange="tablaConcil()"><option value="">Todos</option><option value="OK">✅ Cuadra</option><option value="DIFERENCIA">⚠️ Diferencia</option><option value="NO_ENCONTRADA">❌ No existe en PV</option><option value="NO_REGISTRADA">🔍 No registrada</option></select></div>
+      <div><label>Vendedor</label><select id="f-co-v" onchange="tablaConcil()"></select></div>
+      <button class="btn o" onclick="exportar('concil')">⬇ CSV</button>
+    </div>
+    <div class="kpis" id="co-kpis"></div>
+    <div class="tw"><table id="tb-concil"><tr><td class="muted">Presiona Conciliar.</td></tr></table></div>
   </div>
 </section>
 </main>
@@ -452,9 +468,42 @@ function reportes(){
   $('tb-canjes').innerHTML='<tr><th>Tipo / artículo</th><th class="n">Canjes</th><th class="n">Puntos</th></tr>'+Object.entries(porK).map(([k,x])=>`<tr><td>${k}</td><td class="n">${x.n}</td><td class="n">${num(x.p)}</td></tr>`).join('');
 }
 
+/* ---------- CONCILIACIÓN ---------- */
+let CONCIL=[], CO_ROWS=[], CO_INFO={};
+const CO_EST={OK:['✅ Cuadra','p-c'],DIFERENCIA:['⚠️ Diferencia','p-a'],NO_ENCONTRADA:['❌ No existe en PV','p-x'],NO_REGISTRADA:['🔍 No registrada','p-x']};
+async function conciliar(){
+  const b=$('b-concil'); b.disabled=true; b.textContent='Conciliando…';
+  try{
+    const r=await fetch(API_URL+'?action=conciliar').then(r=>r.json());
+    if(!r.ok) throw new Error(r.error);
+    CONCIL=r.conciliacion; CO_INFO=r; tablaConcil();
+    toast('Conciliación lista · facturas leídas: '+Object.entries(r.facturasBD).map(([k,v])=>k+' '+v).join(', '));
+  }catch(e){ toast(e.message,true); }
+  finally{ b.disabled=false; b.textContent='⚖ Conciliar'; }
+}
+function tablaConcil(){
+  const fv=$('f-co-v'); if(fv.options.length<2) fv.innerHTML='<option value="">Todos</option>'+DB.vendedores.map(v=>`<option value="${v.Prefijo}">${v.Prefijo} · ${v.Vendedor}</option>`).join('');
+  const e=$('f-co-e').value, v=fv.value;
+  CO_ROWS=CONCIL.filter(x=>(!e||x.estado===e)&&(!v||x.folio.startsWith(v)));
+  const cnt=k=>CONCIL.filter(x=>x.estado===k).length;
+  const pend=r2(CONCIL.filter(x=>x.estado==='NO_REGISTRADA').reduce((a,x)=>a+x.puntosSugeridos,0));
+  $('co-kpis').innerHTML=[[cnt('OK'),'✅ Cuadran'],[cnt('DIFERENCIA'),'⚠️ Con diferencia'],[cnt('NO_ENCONTRADA'),'❌ No existen en PV'],[cnt('NO_REGISTRADA'),'🔍 Compras sin registrar'],[num(pend),'Puntos que se le deben a clientes']].map(([b,s])=>`<div class="kpi"><b>${b}</b><span>${s}</span></div>`).join('');
+  $('tb-concil').innerHTML='<tr><th>Estado</th><th>Folio</th><th>Cliente</th><th>Código</th><th>BD</th><th>Factura</th><th>Fecha reg.</th><th>Fecha PV</th><th class="n">Importe reg.</th><th class="n">Importe PV (c/IVA)</th><th>Detalle</th><th></th></tr>'+
+  CO_ROWS.map((x,i)=>`<tr><td><span class="pill ${CO_EST[x.estado][1]}">${CO_EST[x.estado][0]}</span></td><td><b>${x.folio}</b></td><td>${x.cliente}</td><td>${x.codigo||''}</td><td>${x.bd}</td><td>${x.factura}</td><td>${fdate(x.fechaReg)}</td><td>${fdate(x.fechaPV)}</td><td class="n">${x.importeReg!=null?money(x.importeReg):''}</td><td class="n">${x.importePV!=null?money(x.importePV):''}</td><td style="white-space:normal;min-width:220px">${x.detalle}</td><td>${
+    x.estado==='NO_REGISTRADA'?`<button class="btn sm" onclick="coRegistrar(${i})">Registrar</button>`:
+    x.estado==='NO_ENCONTRADA'||x.estado==='DIFERENCIA'?`<button class="btn o sm" onclick="anular('${x.id}')">Anular</button>`:''}</td></tr>`).join('');
+}
+function coRegistrar(i){
+  const x=CO_ROWS[i], c=cli(x.folio);
+  $('c-folio').value=x.folio+' · '+(c?.Nombre||''); $('c-fecha').value=x.fechaPV||hoy(); $('c-fac').value=x.factura; $('c-imp').value=x.importePV;
+  calcPts(); infoCli('c');
+  document.querySelector('nav button[data-t=compra]').click();
+  toast('Revisa los datos y presiona Registrar compra');
+}
+
 /* ---------- EXPORTAR ---------- */
 function exportar(t){
-  const rows = t==='clientes'?CLI_ROWS:t==='movs'?MOV_ROWS:REP_ROWS; if(!rows.length) return toast('Sin datos',true);
+  const rows = t==='clientes'?CLI_ROWS:t==='movs'?MOV_ROWS:t==='concil'?CO_ROWS:REP_ROWS; if(!rows.length) return toast('Sin datos',true);
   const keys=Object.keys(rows[0]);
   const csv='\ufeff'+[keys.join(','),...rows.map(r=>keys.map(k=>`"${String(r[k]??'').replace(/"/g,'""')}"`).join(','))].join('\n');
   const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download=`cliente-frecuente-${t}-${hoy()}.csv`; a.click();
