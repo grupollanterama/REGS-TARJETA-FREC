@@ -409,7 +409,7 @@ function infoCli(p){
   const puede = e.compras>=DB.config.comprasMinCanje;
   box.innerHTML=`<div class="cli-box"><b>${c.Nombre}</b> · ${c.Telefono}<br>${c['Base / Empresa']||''} ${c['Tipo Cliente']?'· '+c['Tipo Cliente']:''} · ${c['Tipo Precio']||''}<br>
   Vendedor: ${c.Vendedor}<br><span class="muted">${DESCUENTOS}</span><br>Compras: <b>${e.compras}</b> · Facturado: <b>${money(e.facturado)}</b><br>Saldo: <b style="font-size:16px">${num(e.saldo)} pts</b>
-  ${p==='k'&&!puede?`<br><span style="color:var(--red);font-weight:600">⚠ Podrá canjear a partir de su compra #${DB.config.comprasMinCanje}</span>`:''}</div>`;
+  ${p==='k'&&!puede?`<br><span style="color:var(--red);font-weight:600">⚠ Aún no tiene compras registradas con puntos</span>`:''}</div>`;
   if(p==='k') calcSaldo();
 }
 function calcPts(){ $('c-pts').textContent=num(r2(Number($('c-imp').value||0)*DB.config.porcentaje)); }
