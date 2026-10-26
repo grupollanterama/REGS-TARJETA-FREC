@@ -76,6 +76,7 @@ tr.click{cursor:pointer}tr.click:hover td{background:#fffbea}
   <button data-t="movs">Movimientos</button>
   <button data-t="reportes">Reportes</button>
   <button data-t="concil">Conciliación</button>
+  <button data-t="pend">WhatsApp pendientes <span id="pend-n" class="pill p-x"></span></button>
 </nav>
 
 <main>
@@ -94,7 +95,8 @@ tr.click{cursor:pointer}tr.click:hover td{background:#fffbea}
     <div class="card">
       <h2>1. Registrar tarjeta entregada</h2>
       <label>Vendedor</label><select id="a-vend" onchange="sugerirFolio()"></select>
-      <label>Folio de la tarjeta</label><input id="a-folio" placeholder="TMG-001" style="text-transform:uppercase">
+      <label>Folio de la tarjeta · asignado automáticamente</label><input id="a-folio" readonly tabindex="-1" style="background:#eef1fb;font-weight:800;color:var(--navy);font-size:18px;cursor:not-allowed">
+      <div class="muted" style="color:var(--red)">Entrega la tarjeta física con este folio.</div>
       <div class="muted" id="a-hint"></div>
       <label>Nombre del cliente</label><input id="a-nombre" placeholder="Nombre completo">
       <div class="row">
@@ -210,6 +212,19 @@ tr.click{cursor:pointer}tr.click:hover td{background:#fffbea}
     <div class="card"><h2>Canjes por tipo / artículo</h2><div class="tw" style="max-height:380px"><table id="tb-canjes"></table></div></div>
   </div>
 </section>
+<!-- WHATSAPP PENDIENTES -->
+<section class="tab" id="t-pend">
+  <div class="card">
+    <h2>Mensajes de WhatsApp por enviar</h2>
+    <p class="muted" style="margin-bottom:12px">Bienvenidas, compras (incluidas las registradas automáticamente) y canjes que aún no se le notifican al cliente. Presiona <b>Enviar</b>: se abre WhatsApp con el mensaje listo y queda marcado como enviado.</p>
+    <div class="filters">
+      <div><label>Vendedor</label><select id="f-p-v" onchange="tablaPend()"></select></div>
+      <div><label>Tipo</label><select id="f-p-t" onchange="tablaPend()"><option value="">Todos</option><option>BIENVENIDA</option><option>COMPRA</option><option>CANJE</option></select></div>
+    </div>
+    <div class="tw"><table id="tb-pend"></table></div>
+  </div>
+</section>
+
 <!-- CONCILIACIÓN -->
 <section class="tab" id="t-concil">
   <div class="card">
@@ -243,6 +258,10 @@ const ARTICULOS = [
   {nombre:'Termo', puntos:200},
   {nombre:'Otro', puntos:0}
 ];
+
+/* Links que se incluyen en los mensajes */
+const PROMO_URL = 'PEGA_AQUI_EL_LINK_DE_PROMOCIONES';               // página de promociones del mes (la del QR)
+const CONSULTA_URL = 'PEGA_AQUI_EL_LINK_DE/consulta.html';          // página donde el cliente consulta sus puntos
 
 /* Descuentos especiales de la tarjeta Cliente Frecuente */
 const DESCUENTOS = 'Lubricantes 32% · Acumuladores 32% · Motobaterías 32% · Llantas: precio especial a consultar';
@@ -300,9 +319,22 @@ const cli = f => DB.clientes.find(c=>c.Folio===String(f||'').trim().toUpperCase(
 const vendDe = pref => DB.vendedores.find(v=>v.Prefijo===pref);
 
 /* ---------- WHATSAPP ---------- */
-function waBox(tel, msg){
+function marcarEnviado(ref,id){ if(ref&&id) post({action:'marcarWA',tipo:ref,id},{disabled:false}); }
+function waBox(tel, msg, estado, ref, id){
   const url = 'https://wa.me/52'+tel+'?text='+encodeURIComponent(msg);
-  return `<div class="wa">${msg.replace(/</g,'&lt;')}</div><br><a class="btn g" href="${url}" target="_blank" style="text-decoration:none;display:inline-block">Enviar por WhatsApp</a>`;
+  if(estado && estado.startsWith('ENVIADO'))
+    return `<div class="cli-box" style="background:#dcfce7;color:#166534;font-weight:700">✅ WhatsApp enviado automáticamente al cliente</div><div class="wa">${msg.replace(/</g,'&lt;')}</div>`;
+  const aviso = estado ? `<div class="cli-box" style="background:#fff8dd">⚠️ ${estado.startsWith('ERROR')?'No se pudo enviar automáticamente: '+estado:'Envío automático aún no activado'} — envíalo con el botón.</div>` : '';
+  return `${aviso}<div class="wa">${msg.replace(/</g,'&lt;')}</div><br><a class="btn g" href="${url}" target="_blank" onclick="marcarEnviado('${ref||''}','${id||''}')" style="text-decoration:none;display:inline-block">Enviar por WhatsApp</a>`;
+}
+const ultimoMov = folio => [...DB.movimientos].reverse().find(m=>m.Folio===folio)?.ID;
+function msgBienvenida(c){
+  return `¡Hola ${c.Nombre}! 👋\nBienvenido al sistema de recompensas de *Grupo Llanterama*.\n\nTu tarjeta Cliente Frecuente es la *${c.Folio}*.\nCompra, acumula puntos y canjéalos por artículos promocionales o paga tus próximas compras.\n\nPor cada compra acumulas el 1% en puntos. Solo pide en el punto de venta que registren tu compra.\n\nAdemás, con tu tarjeta tienes descuentos especiales:\n${DESCUENTOS.split(' · ').map(x=>'• '+x).join('\n')}\n\n📲 *Promociones del mes:* escanea el código QR de tu tarjeta o entra aquí:\n${PROMO_URL}\n\n⭐ *Consulta tus puntos cuando quieras:*\n${CONSULTA_URL}?f=${c.Folio}\n(te pedirá los últimos 4 dígitos de tu teléfono)`+firma(c);
+}
+function msgMovimiento(m,c){
+  const s=estadoCli(c.Folio).saldo;
+  if(m.Tipo==='COMPRA') return `¡Gracias por comprar en *GRUPO LLANTERAMA*! 🛞\n\nTarjeta: ${c.Folio}\nFactura: ${m['Folio Factura']}\nImporte: ${money(m.Importe)}\nPuntos ganados: *${num(m.Puntos)}*\n\nPuntos acumulados: *${num(s)}*\n\nConsulta tu saldo: ${CONSULTA_URL}?f=${c.Folio}`+firma(c);
+  return `*GRUPO LLANTERAMA* · Canje de puntos 🎁\n\nTarjeta: ${c.Folio}\nPuntos utilizados: *${num(-m.Puntos)}*\n${m['Tipo Canje']==='Compra'?'Descuento aplicado en factura '+m['Folio Factura']:'Artículo canjeado: '+m['Artículo']}\n\nSaldo en puntos: *${num(s)}*`+firma(c);
 }
 function firma(c){ const v=vendDe(c.Prefijo); return v?`\n\nTu asesor: ${v.Asesor}\nCel. ${v.Celular}`:''; }
 
@@ -318,7 +350,7 @@ function render(){
   u.innerHTML='<option value="">¿Quién registra?</option>'+asesores.map(a=>`<option>${a}</option>`).join('')+'<option>Administración</option>';
   u.value=uv;
   $('dl-folios').innerHTML = DB.clientes.map(c=>`<option value="${c.Folio} · ${c.Nombre}">`).join('');
-  resumen(); tablaClientes(); tablaMovs(); reportes();
+  resumen(); tablaClientes(); tablaMovs(); reportes(); tablaPend();
   infoCli('c'); infoCli('k');
 }
 $('usuario').onchange=e=>localStorage.setItem('cf-user',e.target.value);
@@ -346,18 +378,19 @@ const pill=t=>t==='COMPRA'?'<span class="pill p-c">COMPRA</span>':t==='CANJE'?'<
 function sugerirFolio(){
   const p=$('a-vend').value, v=vendDe(p); if(!v) return;
   const usados=DB.clientes.filter(c=>c.Prefijo===p).map(c=>+c.Folio.slice(4));
-  let n=1; while(usados.includes(n)) n++;
-  $('a-folio').value = n<=v.Cantidad ? p+'-'+String(n).padStart(3,'0') : '';
+  const n=(usados.length?Math.max(...usados):0)+1;
+  $('a-folio').value = n<=v.Cantidad ? p+'-'+String(n).padStart(3,'0') : 'SIN TARJETAS';
   $('a-hint').textContent = `${usados.length} de ${v.Cantidad} tarjetas registradas · rango ${p}-001 a ${p}-${String(v.Cantidad).padStart(3,'0')}`;
 }
 async function altaCliente(){
   if(!$('usuario').value) return toast('Selecciona quién registra (arriba a la derecha)',true);
-  const d={action:'registrarCliente',folio:$('a-folio').value,nombre:$('a-nombre').value,telefono:$('a-tel').value,fecha:$('a-fecha').value,
+  if(!confirm(`¿Confirmas que entregaste la tarjeta ${$('a-folio').value}?`)) return;
+  const d={action:'registrarCliente',prefijo:$('a-vend').value,nombre:$('a-nombre').value,telefono:$('a-tel').value,fecha:$('a-fecha').value,
     base:$('a-base').value,codigo:$('a-cod').value,tipoCliente:$('a-tipo').value,tipoPrecio:$('a-precio').value,unidades:$('a-unid').value,notas:$('a-notas').value};
   const r=await post(d,$('b-alta')); if(!r) return;
   const c=cli(r.folio);
-  const msg=`¡Hola ${c.Nombre}! 👋\nBienvenido al sistema de recompensas de *Grupo Llanterama*.\n\nTu tarjeta Cliente Frecuente es la *${c.Folio}*.\nCompra, acumula puntos y canjéalos por artículos promocionales o paga tus próximas compras.\n\nPor cada compra acumulas el 1% en puntos. Solo pide en el punto de venta que registren tu compra.\n\nAdemás, con tu tarjeta tienes descuentos especiales:\n${DESCUENTOS.split(' · ').map(x=>'• '+x).join('\n')}`+firma(c);
-  $('a-wa').innerHTML=waBox(c.Telefono,msg);
+  const msg=msgBienvenida(c);
+  $('a-wa').innerHTML=waBox(c.Telefono,msg,r.wa,'CLI',c.Folio);
   ['a-nombre','a-tel','a-base','a-cod','a-unid','a-notas'].forEach(i=>$(i).value='');
 }
 
@@ -378,7 +411,7 @@ async function regCompra(){
   const c=cli($('c-folio').value); if(!c) return toast('Selecciona una tarjeta registrada',true);
   const r=await post({action:'registrarCompra',folio:c.Folio,fecha:$('c-fecha').value,factura:$('c-fac').value,importe:$('c-imp').value},$('b-compra')); if(!r) return;
   const msg=`¡Gracias por comprar en *GRUPO LLANTERAMA*! 🛞\n\nTarjeta: ${c.Folio}\nFactura: ${$('c-fac').value.toUpperCase()}\nImporte: ${money($('c-imp').value)}\nPuntos ganados: *${num(r.puntos)}*\n\nPuntos acumulados: *${num(r.saldo)}*`+(estadoCli(c.Folio).compras>=DB.config.comprasMinCanje?'\n\n✅ Ya puedes usar tus puntos en tu próxima compra o canjearlos por artículos promocionales.':'')+firma(c);
-  $('c-wa').innerHTML=waBox(c.Telefono,msg);
+  $('c-wa').innerHTML=waBox(c.Telefono,msg,r.wa,'MOV',ultimoMov(c.Folio));
   $('c-fac').value=''; $('c-imp').value=''; calcPts();
 }
 function tipoCanje(){ const t=document.querySelector('[name=k-tipo]:checked').value; $('k-fac-w').style.display=t==='Compra'?'':'none'; $('k-art-w').style.display=t==='Compra'?'none':''; if(t!=='Compra') artPts(); }
@@ -393,7 +426,7 @@ async function regCanje(){
   const r=await post(d,$('b-canje')); if(!r) return;
   const det=t==='Compra'?`Descuento de ${money(d.puntos)} aplicado en factura ${d.factura.toUpperCase()}`:`Artículo canjeado: ${d.articulo}`;
   const msg=`*GRUPO LLANTERAMA* · Canje de puntos 🎁\n\nTarjeta: ${c.Folio}\nPuntos utilizados: *${num(d.puntos)}*\n${det}\n\nSaldo en puntos: *${num(r.saldo)}*\n\n¡Sigue comprando y acumulando!`+firma(c);
-  $('k-wa').innerHTML=waBox(c.Telefono,msg);
+  $('k-wa').innerHTML=waBox(c.Telefono,msg,r.wa,'MOV',ultimoMov(c.Folio));
   $('k-pts').value=''; $('k-fac').value='';
 }
 
@@ -412,8 +445,8 @@ function tablaMovs(){
   const d=$('f-m-d').value,h=$('f-m-h').value,t=$('f-m-t').value,v=$('f-m-v').value;
   MOV_ROWS=[...DB.movimientos].reverse().filter(m=>filtroFecha(m,d,h)&&(!t||m.Tipo.startsWith(t))&&(!v||m.Folio.startsWith(v)))
     .map(m=>({...m,Cliente:cli(m.Folio)?.Nombre||''}));
-  $('tb-movs').innerHTML='<tr><th>Fecha</th><th>Folio</th><th>Cliente</th><th>Tipo</th><th>Factura</th><th class="n">Importe</th><th class="n">Puntos</th><th>Uso</th><th>Artículo</th><th>Registró</th><th></th></tr>'+
-  MOV_ROWS.map(m=>`<tr><td>${fdate(m.Fecha)}</td><td>${m.Folio}</td><td>${m.Cliente}</td><td>${pill(m.Tipo)}</td><td>${m['Folio Factura']||''}</td><td class="n">${m.Importe?money(m.Importe):''}</td><td class="n" style="color:${m.Puntos<0?'var(--red)':'var(--ok)'}">${num(m.Puntos)}</td><td>${m['Tipo Canje']||''}</td><td>${m['Artículo']||''}</td><td>${m['Registró']||''}</td><td>${m.Tipo.startsWith('ANULADO')?'':`<button class="btn o sm" onclick="anular('${m.ID}')">Anular</button>`}</td></tr>`).join('');
+  $('tb-movs').innerHTML='<tr><th>Fecha</th><th>Folio</th><th>Cliente</th><th>Tipo</th><th>Factura</th><th class="n">Importe</th><th class="n">Puntos</th><th>Uso</th><th>Artículo</th><th>Registró</th><th>WhatsApp</th><th></th></tr>'+
+  MOV_ROWS.map(m=>`<tr><td>${fdate(m.Fecha)}</td><td>${m.Folio}</td><td>${m.Cliente}</td><td>${pill(m.Tipo)}</td><td>${m['Folio Factura']||''}</td><td class="n">${m.Importe?money(m.Importe):''}</td><td class="n" style="color:${m.Puntos<0?'var(--red)':'var(--ok)'}">${num(m.Puntos)}</td><td>${m['Tipo Canje']||''}</td><td>${m['Artículo']||''}</td><td>${m['Registró']||''}</td><td>${String(m.WhatsApp||'').startsWith('ENVIADO')?'✅':'⏳'}</td><td>${m.Tipo.startsWith('ANULADO')?'':`<button class="btn o sm" onclick="anular('${m.ID}')">Anular</button>`}</td></tr>`).join('');
 }
 async function anular(id){
   const motivo=prompt('Motivo de la anulación (ej. factura capturada mal):'); if(!motivo) return;
@@ -466,6 +499,27 @@ function reportes(){
   const porK={};
   ms.filter(m=>m.Tipo==='CANJE').forEach(m=>{const k=m['Tipo Canje']+(m['Artículo']?' · '+m['Artículo']:''); (porK[k]??={n:0,p:0}); porK[k].n++; porK[k].p+=-Number(m.Puntos);});
   $('tb-canjes').innerHTML='<tr><th>Tipo / artículo</th><th class="n">Canjes</th><th class="n">Puntos</th></tr>'+Object.entries(porK).map(([k,x])=>`<tr><td>${k}</td><td class="n">${x.n}</td><td class="n">${num(x.p)}</td></tr>`).join('');
+}
+
+/* ---------- WHATSAPP PENDIENTES ---------- */
+let PEND=[];
+const enviado = x => String(x||'').startsWith('ENVIADO');
+function tablaPend(){
+  const fv=$('f-p-v'); if(fv.options.length<2) fv.innerHTML='<option value="">Todos</option>'+DB.vendedores.map(v=>`<option value="${v.Prefijo}">${v.Prefijo} · ${v.Vendedor}</option>`).join('');
+  const all=[
+    ...DB.clientes.filter(c=>!enviado(c.WhatsApp)).map(c=>({tipo:'BIENVENIDA',id:c.Folio,ref:'CLI',c,fecha:c['Fecha Alta'],msg:msgBienvenida(c)})),
+    ...DB.movimientos.filter(m=>(m.Tipo==='COMPRA'||m.Tipo==='CANJE')&&!enviado(m.WhatsApp)).map(m=>{const c=cli(m.Folio);return c&&{tipo:m.Tipo,id:m.ID,ref:'MOV',c,fecha:m.Fecha,m,msg:msgMovimiento(m,c)};}).filter(Boolean)
+  ].sort((a,b)=>String(a.fecha).localeCompare(String(b.fecha)));
+  $('pend-n').textContent=all.length||'';
+  const v=fv.value,t=$('f-p-t').value;
+  PEND=all.filter(x=>(!v||x.c.Prefijo===v)&&(!t||x.tipo===t));
+  $('tb-pend').innerHTML='<tr><th>Fecha</th><th>Tipo</th><th>Folio</th><th>Cliente</th><th>Teléfono</th><th>Detalle</th><th></th></tr>'+
+  (PEND.length?PEND.map((x,i)=>`<tr><td>${fdate(x.fecha)}</td><td>${x.tipo==='BIENVENIDA'?'<span class="pill p-a">BIENVENIDA</span>':pill(x.tipo)}</td><td><b>${x.c.Folio}</b></td><td>${x.c.Nombre}</td><td>${x.c.Telefono}</td><td>${x.m?(x.tipo==='COMPRA'?money(x.m.Importe)+' · +'+num(x.m.Puntos)+' pts':num(x.m.Puntos)+' pts'):''}${x.m&&x.m['Registró']==='AUTOMÁTICO'?' <span class="muted">(auto)</span>':''}</td><td><button class="btn g sm" onclick="enviarPend(${i},this)">Enviar</button></td></tr>`).join(''):'<tr><td colspan="7" class="muted">🎉 No hay mensajes pendientes.</td></tr>');
+}
+async function enviarPend(i,btn){
+  const x=PEND[i];
+  window.open('https://wa.me/52'+x.c.Telefono+'?text='+encodeURIComponent(x.msg),'_blank');
+  await post({action:'marcarWA',tipo:x.ref,id:x.id},btn);
 }
 
 /* ---------- CONCILIACIÓN ---------- */
