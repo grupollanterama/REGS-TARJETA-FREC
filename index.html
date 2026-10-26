@@ -63,6 +63,10 @@ tr.click{cursor:pointer}tr.click:hover td{background:#fffbea}
 #tb-cli td.n{white-space:nowrap}
 body:has(#t-clientes.on) main{max-width:none}
 @media(max-width:900px){#t-clientes .tw{overflow-x:auto}#tb-cli td{white-space:nowrap}}
+.rgrid{grid-template-columns:330px 1fr}
+.vs{display:flex;gap:10px;align-items:flex-start;padding:8px 6px;border-radius:8px;cursor:pointer;margin:0;color:var(--txt);font-size:13px;font-weight:500}
+.vs:hover{background:#fffbea}.vs input{width:auto;margin-top:3px}.vs.off{opacity:.45}
+@media(max-width:900px){.rgrid{grid-template-columns:1fr}}
 @media(max-width:600px){.row{grid-template-columns:1fr}header h1{font-size:17px}}
 </style>
 </head>
@@ -75,23 +79,39 @@ body:has(#t-clientes.on) main{max-width:none}
   </div>
 </header>
 <nav id="nav">
-  <button data-t="inicio" class="on">Resumen</button>
+  <button data-t="inicio" class="on">Resumen general</button>
   <button data-t="alta">Alta de tarjeta</button>
   <button data-t="canje">Canjear puntos</button>
   <button data-t="clientes">Clientes</button>
   <button data-t="movs">Movimientos</button>
-  <button data-t="reportes">Reportes</button>
   <button data-t="concil">Conciliación</button>
 </nav>
 
 <main>
-<!-- RESUMEN -->
+<!-- RESUMEN GENERAL -->
 <section class="tab on" id="t-inicio">
-  <div class="kpis" id="kpis"></div>
-  <div class="grid g2">
-    <div class="card"><h2>Avance de tarjetas por vendedor</h2><div id="avance"></div></div>
-    <div class="card"><h2>Últimos movimientos</h2><div class="tw" style="max-height:360px"><table id="ultimos"></table></div></div>
+  <div class="card" style="margin-bottom:16px">
+    <div class="filters">
+      <div><label>Desde</label><input type="date" id="f-r-d" onchange="resumen()"></div>
+      <div><label>Hasta</label><input type="date" id="f-r-h" onchange="resumen()"></div>
+      <div><label>Zona (selección rápida)</label><select id="f-r-z" onchange="zonaSel()"><option value="">Todas</option><option>Tulancingo</option><option>Autoeléctrica</option><option>Poza Rica</option></select></div>
+      <button class="btn o" onclick="exportar('rep')">⬇ CSV</button>
+    </div>
+    <div class="kpis" id="r-kpis" style="margin-bottom:0"></div>
   </div>
+  <div class="grid rgrid" style="margin-bottom:16px">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><h2 style="margin:0">Vendedores</h2>
+        <div style="display:flex;gap:6px"><button class="btn o sm" onclick="selTodos(true)">Todos</button><button class="btn o sm" onclick="selTodos(false)">Ninguno</button></div></div>
+      <div id="vend-sel"></div>
+    </div>
+    <div class="card"><h2>Resultados por vendedor</h2><div class="tw"><table id="tb-rep"></table></div></div>
+  </div>
+  <div class="grid g2" style="margin-bottom:16px">
+    <div class="card"><h2>Top clientes por facturación</h2><div class="tw" style="max-height:380px"><table id="tb-top"></table></div></div>
+    <div class="card"><h2>Canjes por tipo / artículo</h2><div class="tw" style="max-height:380px"><table id="tb-canjes"></table></div></div>
+  </div>
+  <div class="card"><h2>Últimas compras y canjes</h2><div class="tw" style="max-height:400px"><table id="ultimos"></table></div></div>
 </section>
 
 <!-- ALTA -->
@@ -200,24 +220,6 @@ body:has(#t-clientes.on) main{max-width:none}
   </div>
 </section>
 
-<!-- REPORTES -->
-<section class="tab" id="t-reportes">
-  <div class="card" style="margin-bottom:16px">
-    <div class="filters">
-      <div><label>Desde</label><input type="date" id="f-r-d" onchange="reportes()"></div>
-      <div><label>Hasta</label><input type="date" id="f-r-h" onchange="reportes()"></div>
-      <div><label>Zona</label><select id="f-r-z" onchange="reportes()"><option value="">Todas</option><option>Tulancingo</option><option>Autoeléctrica</option><option>Poza Rica</option></select></div>
-      <button class="btn o" onclick="exportar('rep')">⬇ CSV</button>
-    </div>
-    <div class="kpis" id="r-kpis"></div>
-    <h2 style="font-size:15px;color:var(--navy);margin:6px 0 10px">Por vendedor: facturación y puntos</h2>
-    <div class="tw"><table id="tb-rep"></table></div>
-  </div>
-  <div class="grid g2">
-    <div class="card"><h2>Top clientes por facturación</h2><div class="tw" style="max-height:380px"><table id="tb-top"></table></div></div>
-    <div class="card"><h2>Canjes por tipo / artículo</h2><div class="tw" style="max-height:380px"><table id="tb-canjes"></table></div></div>
-  </div>
-</section>
 <!-- WHATSAPP PENDIENTES -->
 <section class="tab" id="t-pend">
   <div class="card">
@@ -310,7 +312,7 @@ async function post(data, btn){
 }
 
 /* ---------- CÁLCULOS ---------- */
-function vigentes(){ return DB.movimientos.filter(m=>m.Tipo==='COMPRA'||m.Tipo==='CANJE'); }
+function vigentes(){ return DB.movimientos.filter(m=>m.Tipo==='COMPRA'||m.Tipo==='CANJE'||m.Tipo==='AJUSTE'); }
 function estadoCli(folio){
   const ms = vigentes().filter(m=>m.Folio===folio);
   const c = ms.filter(m=>m.Tipo==='COMPRA'), k = ms.filter(m=>m.Tipo==='CANJE');
@@ -361,6 +363,7 @@ function firma(c){ const v=vendDe(c.Prefijo); return v?`\n\nTu asesor: ${v.Aseso
 
 /* ---------- RENDER ---------- */
 function render(){
+  DB.vendedores.forEach(v=>{ if(ZONAS[v.Prefijo]) v.Zona=ZONAS[v.Prefijo]; });
   // selects
   const vOpts = DB.vendedores.map(v=>`<option value="${v.Prefijo}">${v.Prefijo} · ${v.Vendedor}</option>`).join('');
   const keep = (id,html)=>{ const s=$(id), val=s.value; s.innerHTML=html; if(val) s.value=val; };
@@ -371,29 +374,56 @@ function render(){
   u.innerHTML='<option value="">¿Quién registra?</option>'+asesores.map(a=>`<option>${a}</option>`).join('')+'<option>Administración</option>';
   u.value=uv;
   $('dl-folios').innerHTML = DB.clientes.map(c=>`<option value="${c.Folio} · ${c.Nombre}">`).join('');
-  resumen(); tablaClientes(); tablaMovs(); reportes();
+  resumen(); tablaClientes(); tablaMovs();
   infoCli('c'); infoCli('k');
 }
 $('usuario').onchange=e=>{localStorage.setItem('cf-user',e.target.value); tablaMovs(); if(CONCIL.length) tablaConcil();};
 
+const ZONAS={TMG:'Tulancingo',TER:'Tulancingo',AML:'Autoeléctrica',PYM:'Poza Rica',PJV:'Poza Rica',TPS:'Poza Rica',PAL:'Poza Rica',PNA:'Poza Rica',PCA:'Poza Rica'};
+let SEL=null;
+function zonaSel(){ const z=$('f-r-z').value; SEL=new Set(DB.vendedores.filter(v=>!z||v.Zona===z).map(v=>v.Prefijo)); resumen(); }
+function toggleV(p,ch){ ch?SEL.add(p):SEL.delete(p); $('f-r-z').value=''; resumen(); }
+function selTodos(b){ SEL=new Set(b?DB.vendedores.map(v=>v.Prefijo):[]); $('f-r-z').value=''; resumen(); }
 function resumen(){
-  const v=vigentes(), c=v.filter(m=>m.Tipo==='COMPRA'), k=v.filter(m=>m.Tipo==='CANJE');
-  const tot=DB.vendedores.reduce((a,x)=>a+Number(x.Cantidad),0);
-  const fac=c.reduce((a,m)=>a+Number(m.Importe),0), em=c.reduce((a,m)=>a+Number(m.Puntos),0), us=-k.reduce((a,m)=>a+Number(m.Puntos),0);
-  const activos=new Set(c.map(m=>m.Folio)).size;
-  $('kpis').innerHTML=[
-    [DB.clientes.length+' / '+tot,'Tarjetas entregadas'],[activos,'Clientes con compra'],
-    [c.length,'Compras registradas'],[money(fac),'Facturación con tarjeta'],
-    [num(em),'Puntos emitidos'],[num(us),'Puntos canjeados'],[num(em-us),'Puntos en circulación']
-  ].map(([b,s])=>`<div class="kpi"><b>${b}</b><span>${s}</span></div>`).join('');
-  $('avance').innerHTML=DB.vendedores.map(x=>{
-    const n=DB.clientes.filter(c=>c.Prefijo===x.Prefijo).length, p=Math.min(100,n/x.Cantidad*100);
-    return `<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:13px"><span><b>${x.Prefijo}</b> ${x.Vendedor}</span><span>${n}/${x.Cantidad}</span></div><div class="bar"><i style="width:${p}%"></i></div></div>`;
+  if(!SEL) SEL=new Set(DB.vendedores.map(v=>v.Prefijo));
+  const d=$('f-r-d').value,h=$('f-r-h').value;
+  const enSel=m=>SEL.has(String(m.Folio).slice(0,3));
+  const ms=vigentes().filter(m=>filtroFecha(m,d,h)&&enSel(m));
+  // lista de vendedores con casilla
+  $('vend-sel').innerHTML=['Tulancingo','Autoeléctrica','Poza Rica'].map(z=>{
+    const vs=DB.vendedores.filter(v=>v.Zona===z); if(!vs.length) return '';
+    return `<div class="muted" style="font-weight:700;margin:10px 0 2px;text-transform:uppercase">${z}</div>`+vs.map(x=>{
+      const n=DB.clientes.filter(c=>c.Prefijo===x.Prefijo).length, p=Math.min(100,n/x.Cantidad*100), on=SEL.has(x.Prefijo);
+      return `<label class="vs ${on?'':'off'}"><input type="checkbox" ${on?'checked':''} onchange="toggleV('${x.Prefijo}',this.checked)"><div style="flex:1"><div style="display:flex;justify-content:space-between"><span><b>${x.Prefijo}</b> ${x.Vendedor}</span><span>${n}/${x.Cantidad}</span></div><div class="bar" style="margin-top:4px"><i style="width:${p}%"></i></div></div></label>`;
+    }).join('');
   }).join('');
-  const ult=[...DB.movimientos].reverse().slice(0,12);
-  $('ultimos').innerHTML='<tr><th>Fecha</th><th>Folio</th><th>Tipo</th><th class="n">Puntos</th></tr>'+ult.map(m=>`<tr><td>${fdate(m.Fecha)}</td><td>${m.Folio}</td><td>${pill(m.Tipo)}</td><td class="n">${num(m.Puntos)}</td></tr>`).join('');
+  // tabla por vendedor
+  REP_ROWS=DB.vendedores.filter(v=>SEL.has(v.Prefijo)).map(v=>{
+    const mm=ms.filter(m=>m.Folio.startsWith(v.Prefijo)), c=mm.filter(m=>m.Tipo==='COMPRA'), k=mm.filter(m=>m.Tipo==='CANJE');
+    const tarj=DB.clientes.filter(x=>x.Prefijo===v.Prefijo).length;
+    const fac=c.reduce((a,m)=>a+Number(m.Importe),0), em=c.reduce((a,m)=>a+Number(m.Puntos),0), us=-k.reduce((a,m)=>a+Number(m.Puntos),0);
+    return {Prefijo:v.Prefijo,Vendedor:v.Vendedor,Zona:v.Zona,Asignadas:Number(v.Cantidad),Entregadas:tarj,Activos:new Set(c.map(m=>m.Folio)).size,Compras:c.length,Facturacion:fac,Ticket:c.length?fac/c.length:0,Emitidos:r2(em),Canjeados:r2(us),Saldo:r2(em-us)};
+  });
+  const T=k=>REP_ROWS.reduce((a,r)=>a+r[k],0);
+  $('r-kpis').innerHTML=[[T('Entregadas')+' / '+T('Asignadas'),'Tarjetas entregadas'],[T('Activos'),'Clientes con compra'],[T('Compras'),'Compras'],[money(T('Facturacion')),'Facturación con tarjeta'],[money(T('Compras')?T('Facturacion')/T('Compras'):0),'Ticket promedio'],[num(T('Emitidos')),'Puntos emitidos (1%)'],[num(T('Canjeados')),'Puntos canjeados'],[num(T('Saldo')),'Puntos por canjear']].map(([b,s])=>`<div class="kpi"><b>${b}</b><span>${s}</span></div>`).join('');
+  $('tb-rep').innerHTML=!REP_ROWS.length?'<tr><td class="muted">Selecciona al menos un vendedor.</td></tr>':'<tr><th>Vendedor</th><th>Zona</th><th class="n">Entregadas</th><th class="n">% Entrega</th><th class="n">Activos</th><th class="n">Compras</th><th class="n">Facturación</th><th class="n">Ticket prom.</th><th class="n">Pts emitidos</th><th class="n">Pts canjeados</th><th class="n">Saldo pts</th></tr>'+
+    REP_ROWS.map(r=>`<tr><td><b>${r.Prefijo}</b> ${r.Vendedor}</td><td>${r.Zona}</td><td class="n">${r.Entregadas}/${r.Asignadas}</td><td class="n">${(r.Entregadas/r.Asignadas*100).toFixed(0)}%</td><td class="n">${r.Activos}</td><td class="n">${r.Compras}</td><td class="n">${money(r.Facturacion)}</td><td class="n">${money(r.Ticket)}</td><td class="n">${num(r.Emitidos)}</td><td class="n">${num(r.Canjeados)}</td><td class="n"><b>${num(r.Saldo)}</b></td></tr>`).join('')+
+    `<tr style="background:#fff8dd;font-weight:700"><td>TOTAL</td><td></td><td class="n">${T('Entregadas')}/${T('Asignadas')}</td><td class="n">${(T('Entregadas')/T('Asignadas')*100||0).toFixed(0)}%</td><td class="n">${T('Activos')}</td><td class="n">${T('Compras')}</td><td class="n">${money(T('Facturacion'))}</td><td class="n">${money(T('Compras')?T('Facturacion')/T('Compras'):0)}</td><td class="n">${num(T('Emitidos'))}</td><td class="n">${num(T('Canjeados'))}</td><td class="n">${num(T('Saldo'))}</td></tr>`;
+  // top clientes
+  const porCli={};
+  ms.filter(m=>m.Tipo==='COMPRA').forEach(m=>{(porCli[m.Folio]??={f:m.Folio,n:0,t:0}); porCli[m.Folio].n++; porCli[m.Folio].t+=Number(m.Importe);});
+  const top=Object.values(porCli).sort((a,b)=>b.t-a.t).slice(0,20);
+  $('tb-top').innerHTML='<tr><th>Folio</th><th>Cliente</th><th class="n">Compras</th><th class="n">Facturado</th><th class="n">Saldo pts</th></tr>'+(top.length?top.map(x=>`<tr class="click" onclick="detalle('${x.f}')"><td>${x.f}</td><td>${cli(x.f)?.Nombre||''}</td><td class="n">${x.n}</td><td class="n">${money(x.t)}</td><td class="n">${num(estadoCli(x.f).saldo)}</td></tr>`).join(''):'<tr><td colspan="5" class="muted">Sin compras en la selección.</td></tr>');
+  // canjes
+  const porK={};
+  ms.filter(m=>m.Tipo==='CANJE').forEach(m=>{const k=(m['Tipo Canje']==='Compra'?'Descuento en compra':'Artículo')+(m['Artículo']?' · '+m['Artículo']:''); (porK[k]??={n:0,p:0}); porK[k].n++; porK[k].p+=-Number(m.Puntos);});
+  const ks=Object.entries(porK);
+  $('tb-canjes').innerHTML='<tr><th>Tipo / artículo</th><th class="n">Canjes</th><th class="n">Puntos</th></tr>'+(ks.length?ks.map(([k,x])=>`<tr><td>${k}</td><td class="n">${x.n}</td><td class="n">${num(x.p)}</td></tr>`).join(''):'<tr><td colspan="3" class="muted">Sin canjes en la selección.</td></tr>');
+  // últimos movimientos
+  const ult=[...ms].sort((a,b)=>String(b.Fecha).localeCompare(String(a.Fecha))).slice(0,15);
+  $('ultimos').innerHTML='<tr><th>Fecha</th><th>Folio</th><th>Cliente</th><th>Tipo</th><th>Factura</th><th class="n">Importe</th><th class="n">Puntos</th></tr>'+(ult.length?ult.map(m=>`<tr class="click" onclick="detalle('${m.Folio}')"><td>${fdate(m.Fecha)}</td><td>${m.Folio}</td><td>${cli(m.Folio)?.Nombre||''}</td><td>${pill(m.Tipo)}</td><td>${m['Folio Factura']||''}</td><td class="n">${m.Importe?money(m.Importe):''}</td><td class="n" style="color:${m.Puntos<0?'var(--red)':'var(--ok)'}">${num(m.Puntos)}</td></tr>`).join(''):'<tr><td colspan="7" class="muted">Sin movimientos en la selección.</td></tr>');
 }
-const pill=t=>t==='COMPRA'?'<span class="pill p-c">COMPRA</span>':t==='CANJE'?'<span class="pill p-x">CANJE</span>':'<span class="pill p-a">ANULADO</span>';
+const pill=t=>t==='COMPRA'?'<span class="pill p-c">COMPRA</span>':t==='CANJE'?'<span class="pill p-x">CANJE</span>':t==='AJUSTE'?'<span class="pill p-x" style="background:#ede9fe;color:#5b21b6">REINICIO</span>':'<span class="pill p-a">ANULADO</span>';
 
 /* ---------- ALTA ---------- */
 function sugerirFolio(){
@@ -483,11 +513,20 @@ function detalle(folio){
   let s=0;
   $('modal-c').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:start"><h2>${c.Folio} · ${c.Nombre}</h2><button class="btn o sm" onclick="$('modal').classList.remove('on')">✕</button></div>
   <div class="cli-box">📱 ${c.Telefono} · ${c['Base / Empresa']||'—'} · ${c['Tipo Cliente']||''} · ${c['Tipo Precio']||''} · ${c.Unidades||'?'} unidades<br>Alta: ${fdate(c['Fecha Alta'])} · Vendedor: ${c.Vendedor} · Asesor: ${v?.Asesor||''}</div>
-  <div class="row" style="margin-top:10px;align-items:end">
-    <div><label>Código de cliente (punto de venta)</label><input id="e-cod" value="${c['Código Cliente']||''}" style="text-transform:uppercase"></div>
-    <div><label>Teléfono</label><input id="e-tel" value="${c.Telefono}" maxlength="10"></div>
+  <details style="margin-top:10px"><summary style="cursor:pointer;font-weight:700;color:var(--navy)">✏️ Editar datos / reasignar tarjeta</summary>
+  <div class="row" style="margin-top:6px">
+    <div><label>Nombre del titular</label><input id="e-nom" value="${String(c.Nombre).replace(/"/g,'&quot;')}"></div>
+    <div><label>Teléfono</label><input id="e-tel" value="${c.Telefono}" maxlength="10" inputmode="numeric"></div>
   </div>
+  <div class="row">
+    <div><label>Base / Empresa</label><input id="e-base" value="${String(c['Base / Empresa']||'').replace(/"/g,'&quot;')}"></div>
+    <div><label>Código de cliente (punto de venta)</label><input id="e-cod" value="${c['Código Cliente']||''}" style="text-transform:uppercase"></div>
+  </div>
+  <label class="vs" style="margin-top:8px;padding:8px;border:1px solid var(--line)"><input type="checkbox" id="e-reset"><div><b>Reiniciar puntos a 0 para el nuevo titular</b><div class="muted">Solo aplica si cambias nombre o teléfono. El saldo actual (${num(e.saldo)} pts) se da de baja y queda registrado como REINICIO en Movimientos.</div></div></label>
+  <div class="muted" style="margin-top:6px">Si cambias nombre o teléfono, se guarda el titular anterior en Notas. Sin la casilla, el folio, historial y saldo se conservan en la tarjeta.</div>
   <button class="btn sm" style="margin-top:8px" onclick="guardarCli('${folio}',this)">Guardar cambios</button>
+  <div id="e-wa"></div></details>
+  ${c.Notas?`<div class="muted" style="margin-top:6px">📝 ${c.Notas}</div>`:''}
   <div class="kpis" style="margin-top:14px">${[[e.compras,'Compras'],[money(e.facturado),'Facturado'],[num(e.ganados),'Pts ganados'],[num(e.usados),'Pts usados'],[num(e.saldo),'Saldo']].map(([b,x])=>`<div class="kpi"><b>${b}</b><span>${x}</span></div>`).join('')}</div>
   <div class="tw"><table><tr><th>Fecha</th><th>Tipo</th><th>Factura</th><th class="n">Importe</th><th class="n">Puntos</th><th>Detalle</th><th class="n">Saldo</th></tr>
   ${ms.map(m=>{ if(!m.Tipo.startsWith('ANULADO')) s=r2(s+Number(m.Puntos)); return `<tr><td>${fdate(m.Fecha)}</td><td>${pill(m.Tipo)}</td><td>${m['Folio Factura']||''}</td><td class="n">${m.Importe?money(m.Importe):''}</td><td class="n">${num(m.Puntos)}</td><td>${m['Tipo Canje']||''} ${m['Artículo']||''}</td><td class="n"><b>${num(s)}</b></td></tr>`;}).join('')}</table></div>
@@ -496,32 +535,13 @@ function detalle(folio){
 }
 
 async function guardarCli(folio,btn){
-  const r=await post({action:'actualizarCliente',folio,codigo:$('e-cod').value,telefono:$('e-tel').value},btn);
-  if(r) detalle(folio);
-}
-
-/* ---------- REPORTES ---------- */
-function reportes(){
-  const d=$('f-r-d').value,h=$('f-r-h').value,z=$('f-r-z').value;
-  const vs=DB.vendedores.filter(v=>!z||v.Zona===z), prefs=vs.map(v=>v.Prefijo);
-  const ms=vigentes().filter(m=>filtroFecha(m,d,h)&&prefs.includes(m.Folio.slice(0,3)));
-  REP_ROWS=vs.map(v=>{
-    const mm=ms.filter(m=>m.Folio.startsWith(v.Prefijo)), c=mm.filter(m=>m.Tipo==='COMPRA'), k=mm.filter(m=>m.Tipo==='CANJE');
-    const tarj=DB.clientes.filter(x=>x.Prefijo===v.Prefijo).length;
-    const fac=c.reduce((a,m)=>a+Number(m.Importe),0), em=c.reduce((a,m)=>a+Number(m.Puntos),0), us=-k.reduce((a,m)=>a+Number(m.Puntos),0);
-    return {Prefijo:v.Prefijo,Vendedor:v.Vendedor,Zona:v.Zona,Asignadas:v.Cantidad,Entregadas:tarj,Activos:new Set(c.map(m=>m.Folio)).size,Compras:c.length,Facturacion:fac,Ticket:c.length?fac/c.length:0,Emitidos:r2(em),Canjeados:r2(us),Saldo:r2(em-us)};
-  });
-  const T=k=>REP_ROWS.reduce((a,r)=>a+r[k],0);
-  $('r-kpis').innerHTML=[[T('Entregadas'),'Tarjetas entregadas'],[T('Activos'),'Clientes activos'],[T('Compras'),'Compras'],[money(T('Facturacion')),'Facturación'],[money(T('Compras')?T('Facturacion')/T('Compras'):0),'Ticket promedio'],[num(T('Emitidos')),'Puntos emitidos (1%)'],[num(T('Canjeados')),'Puntos canjeados'],[num(T('Saldo')),'Pasivo en puntos']].map(([b,s])=>`<div class="kpi"><b>${b}</b><span>${s}</span></div>`).join('');
-  $('tb-rep').innerHTML='<tr><th>Vendedor</th><th>Zona</th><th class="n">Asignadas</th><th class="n">Entregadas</th><th class="n">% Entrega</th><th class="n">Activos</th><th class="n">Compras</th><th class="n">Facturación</th><th class="n">Ticket prom.</th><th class="n">Pts emitidos</th><th class="n">Pts canjeados</th><th class="n">Saldo pts</th></tr>'+
-    REP_ROWS.map(r=>`<tr><td><b>${r.Prefijo}</b> ${r.Vendedor}</td><td>${r.Zona}</td><td class="n">${r.Asignadas}</td><td class="n">${r.Entregadas}</td><td class="n">${(r.Entregadas/r.Asignadas*100).toFixed(0)}%</td><td class="n">${r.Activos}</td><td class="n">${r.Compras}</td><td class="n">${money(r.Facturacion)}</td><td class="n">${money(r.Ticket)}</td><td class="n">${num(r.Emitidos)}</td><td class="n">${num(r.Canjeados)}</td><td class="n"><b>${num(r.Saldo)}</b></td></tr>`).join('')+
-    `<tr style="background:#fff8dd;font-weight:700"><td>TOTAL</td><td></td><td class="n">${T('Asignadas')}</td><td class="n">${T('Entregadas')}</td><td class="n">${(T('Entregadas')/T('Asignadas')*100||0).toFixed(0)}%</td><td class="n">${T('Activos')}</td><td class="n">${T('Compras')}</td><td class="n">${money(T('Facturacion'))}</td><td></td><td class="n">${num(T('Emitidos'))}</td><td class="n">${num(T('Canjeados'))}</td><td class="n">${num(T('Saldo'))}</td></tr>`;
-  const porCli={};
-  ms.filter(m=>m.Tipo==='COMPRA').forEach(m=>{(porCli[m.Folio]??={f:m.Folio,n:0,t:0}); porCli[m.Folio].n++; porCli[m.Folio].t+=Number(m.Importe);});
-  $('tb-top').innerHTML='<tr><th>Folio</th><th>Cliente</th><th class="n">Compras</th><th class="n">Facturado</th></tr>'+Object.values(porCli).sort((a,b)=>b.t-a.t).slice(0,20).map(x=>`<tr class="click" onclick="detalle('${x.f}')"><td>${x.f}</td><td>${cli(x.f)?.Nombre||''}</td><td class="n">${x.n}</td><td class="n">${money(x.t)}</td></tr>`).join('');
-  const porK={};
-  ms.filter(m=>m.Tipo==='CANJE').forEach(m=>{const k=m['Tipo Canje']+(m['Artículo']?' · '+m['Artículo']:''); (porK[k]??={n:0,p:0}); porK[k].n++; porK[k].p+=-Number(m.Puntos);});
-  $('tb-canjes').innerHTML='<tr><th>Tipo / artículo</th><th class="n">Canjes</th><th class="n">Puntos</th></tr>'+Object.entries(porK).map(([k,x])=>`<tr><td>${k}</td><td class="n">${x.n}</td><td class="n">${num(x.p)}</td></tr>`).join('');
+  const ant=cli(folio), cambia=$('e-nom').value.trim()!==String(ant.Nombre)||$('e-tel').value.replace(/\D/g,'')!==String(ant.Telefono);
+  const reset=$('e-reset').checked&&cambia;
+  if(cambia&&!confirm('Vas a cambiar el titular o teléfono de la tarjeta '+folio+'.\n'+(reset?'⚠️ El saldo de '+num(estadoCli(folio).saldo)+' puntos se reiniciará a 0.':'El saldo y el historial de puntos se quedan en la tarjeta.')+'\n¿Continuar?')) return;
+  const r=await post({action:'actualizarCliente',folio,nombre:$('e-nom').value,codigo:$('e-cod').value,telefono:$('e-tel').value,base:$('e-base').value,reiniciar:reset},btn);
+  if(!r) return;
+  detalle(folio);
+  if(r.cambioTitular){ const c=cli(folio); $('e-wa').closest('details').open=true; $('e-wa').innerHTML='<p class="muted" style="margin-top:10px"><b>Envía la bienvenida al nuevo titular:</b></p>'+waBox(c.Telefono,msgBienvenida(c),'','CLI',c.Folio); }
 }
 
 /* ---------- WHATSAPP PENDIENTES ---------- */
