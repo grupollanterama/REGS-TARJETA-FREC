@@ -19,7 +19,7 @@ header small{opacity:.75;display:block;font-weight:500;font-size:12px}
 nav{background:#fff;border-bottom:1px solid var(--line);display:flex;overflow-x:auto;padding:0 12px;position:sticky;top:0;z-index:5}
 nav button{background:none;border:0;padding:14px 16px;font:600 14px Inter;color:var(--mut);cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap}
 nav button.on{color:var(--navy);border-color:var(--yellow)}
-main{max-width:1200px;margin:0 auto;padding:20px 16px 60px}
+main{max-width:1400px;margin:0 auto;padding:20px 16px 60px}
 .tab{display:none}.tab.on{display:block}
 .grid{display:grid;gap:16px}.g2{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:18px}
@@ -63,7 +63,15 @@ tr.click{cursor:pointer}tr.click:hover td{background:#fffbea}
 #tb-cli td.n{white-space:nowrap}
 body:has(#t-clientes.on) main{max-width:none}
 @media(max-width:900px){#t-clientes .tw{overflow-x:auto}#tb-cli td{white-space:nowrap}}
-.rgrid{grid-template-columns:330px 1fr}
+.rgrid{grid-template-columns:300px minmax(0,1fr);align-items:stretch}
+.grid>*{min-width:0}
+#r-kpis{grid-template-columns:repeat(4,minmax(0,1fr))}
+#r-kpis .kpi b{font-size:20px}
+#tb-rep{font-size:12.5px}
+#tb-rep th{white-space:normal;font-size:12px;vertical-align:bottom;padding:8px}
+#tb-rep td{padding:8px}
+#t-inicio .tw{max-height:none}
+@media(max-width:700px){#r-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .vs{display:flex;gap:10px;align-items:flex-start;padding:8px 6px;border-radius:8px;cursor:pointer;margin:0;color:var(--txt);font-size:13px;font-weight:500}
 .vs:hover{background:#fffbea}.vs input{width:auto;margin-top:3px}.vs.off{opacity:.45}
 @media(max-width:900px){.rgrid{grid-template-columns:1fr}}
