@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cliente Frecuente · Grupo Llanterama</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#1f2f6b;--navy2:#2b3f8c;--yellow:#ffc20e;--red:#e30613;--bg:#f3f5fa;--card:#fff;--txt:#1b2236;--mut:#6b7389;--line:#e3e7f0;--ok:#16a34a;--warn:#d97706}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--txt);font-size:14px}
+header{background:linear-gradient(120deg,var(--navy),var(--navy2));color:#fff;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+header h1{font-size:20px;font-weight:800;letter-spacing:-.3px}
+header h1 span{color:var(--yellow)}
+header small{opacity:.75;display:block;font-weight:500;font-size:12px}
+.btn{border:0;border-radius:8px;padding:10px 16px;font:600 14px Inter;cursor:pointer;background:var(--navy);color:#fff}
+.btn.y{background:var(--yellow);color:var(--navy)}.btn.g{background:#25d366}.btn.o{background:#fff;color:var(--navy);border:1px solid var(--line)}
+.btn.sm{padding:6px 10px;font-size:12px}.btn:disabled{opacity:.5;cursor:wait}
+nav{background:#fff;border-bottom:1px solid var(--line);display:flex;overflow-x:auto;padding:0 12px;position:sticky;top:0;z-index:5}
+nav button{background:none;border:0;padding:14px 16px;font:600 14px Inter;color:var(--mut);cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap}
+nav button.on{color:var(--navy);border-color:var(--yellow)}
+main{max-width:1200px;margin:0 auto;padding:20px 16px 60px}
+.tab{display:none}.tab.on{display:block}
+.grid{display:grid;gap:16px}.g2{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:18px}
+.kpi{background:var(--card);border-radius:12px;padding:14px 16px;border-left:4px solid var(--yellow);box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.kpi b{display:block;font-size:22px;font-weight:800;color:var(--navy)}.kpi span{font-size:12px;color:var(--mut)}
+.card{background:var(--card);border-radius:14px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.card h2{font-size:16px;margin-bottom:14px;color:var(--navy)}
+label{display:block;font-size:12px;font-weight:600;color:var(--mut);margin:10px 0 4px}
+input,select,textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font:14px Inter;background:#fff}
+input:focus,select:focus{outline:2px solid var(--yellow);border-color:transparent}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.calc{background:#fff8dd;border:1px dashed var(--yellow);border-radius:10px;padding:12px;margin-top:12px;font-weight:600}
+.calc b{font-size:20px;color:var(--navy)}
+.cli-box{background:#f6f8fd;border-radius:10px;padding:12px;margin-top:10px;font-size:13px;line-height:1.6}
+.cli-box b{color:var(--navy)}
+.pill{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700}
+.p-c{background:#dcfce7;color:#166534}.p-x{background:#fee2e2;color:#991b1b}.p-a{background:#e5e7eb;color:#4b5563}
+.chips{display:flex;gap:8px;margin-top:4px}
+.chips label{margin:0;flex:1;border:1px solid var(--line);border-radius:8px;padding:10px;cursor:pointer;text-align:center;color:var(--txt);font-size:13px}
+.chips input{display:none}.chips label:has(input:checked){border-color:var(--navy);background:#eef1fb;color:var(--navy)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:#f6f8fd;text-align:left;padding:9px 10px;font-weight:700;color:var(--navy);position:sticky;top:0;white-space:nowrap}
+td{padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+td.n,th.n{text-align:right}
+tr.click{cursor:pointer}tr.click:hover td{background:#fffbea}
+.tw{overflow:auto;max-height:560px;border:1px solid var(--line);border-radius:10px}
+.filters{display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin-bottom:14px}
+.filters>div{min-width:150px;flex:1}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;padding:12px 20px;border-radius:10px;font-weight:600;display:none;z-index:50;max-width:90%}
+.toast.err{background:var(--red)}
+.modal{position:fixed;inset:0;background:rgba(15,20,40,.55);display:none;align-items:center;justify-content:center;z-index:40;padding:16px}
+.modal.on{display:flex}
+.modal .card{max-width:760px;width:100%;max-height:90vh;overflow:auto}
+.wa{background:#e9fbe9;border-radius:10px;padding:12px;margin-top:12px;font-size:13px;white-space:pre-wrap}
+.bar{height:8px;background:#eef1f6;border-radius:4px;overflow:hidden}.bar i{display:block;height:100%;background:var(--yellow)}
+.muted{color:var(--mut);font-size:12px}
+@media(max-width:600px){.row{grid-template-columns:1fr}header h1{font-size:17px}}
+</style>
+</head>
+<body>
+<header>
+  <div><h1>Cliente <span>Frecuente</span></h1><small>Sistema de recompensas · Grupo Llanterama</small></div>
+  <div style="display:flex;gap:8px;align-items:center">
+    <select id="usuario" style="width:auto;min-width:200px"></select>
+    <button class="btn y" onclick="cargar()">↻ Actualizar</button>
+  </div>
+</header>
+<nav id="nav">
+  <button data-t="inicio" class="on">Resumen</button>
+  <button data-t="alta">Alta de tarjeta</button>
+  <button data-t="compra">Registrar compra</button>
+  <button data-t="canje">Canjear puntos</button>
+  <button data-t="clientes">Clientes</button>
+  <button data-t="movs">Movimientos</button>
+  <button data-t="reportes">Reportes</button>
+</nav>
+
+<main>
+<!-- RESUMEN -->
+<section class="tab on" id="t-inicio">
+  <div class="kpis" id="kpis"></div>
+  <div class="grid g2">
+    <div class="card"><h2>Avance de tarjetas por vendedor</h2><div id="avance"></div></div>
+    <div class="card"><h2>Últimos movimientos</h2><div class="tw" style="max-height:360px"><table id="ultimos"></table></div></div>
+  </div>
+</section>
+
+<!-- ALTA -->
+<section class="tab" id="t-alta">
+  <div class="grid g2">
+    <div class="card">
+      <h2>1. Registrar tarjeta entregada</h2>
+      <label>Vendedor</label><select id="a-vend" onchange="sugerirFolio()"></select>
+      <label>Folio de la tarjeta</label><input id="a-folio" placeholder="TMG-001" style="text-transform:uppercase">
+      <div class="muted" id="a-hint"></div>
+      <label>Nombre del cliente</label><input id="a-nombre" placeholder="Nombre completo">
+      <div class="row">
+        <div><label>Teléfono WhatsApp (10 dígitos)</label><input id="a-tel" inputmode="numeric" maxlength="10"></div>
+        <div><label>Fecha de entrega</label><input type="date" id="a-fecha"></div>
+      </div>
+      <label>Base / Empresa / Ruta</label><input id="a-base" placeholder="Ej. Base de taxis Centro">
+      <div class="row">
+        <div><label>Tipo de cliente</label><select id="a-tipo"><option>Taxi</option><option>Microbús</option><option>Colectiva</option><option>Flotilla</option><option>Particular</option><option>Otro</option></select></div>
+        <div><label>Tipo de precio</label><select id="a-precio"><option>Precio público</option><option>Mayoreo</option></select></div>
+      </div>
+      <div class="row">
+        <div><label>No. de unidades</label><input type="number" id="a-unid" min="0"></div>
+        <div><label>Notas</label><input id="a-notas"></div>
+      </div>
+      <br><button class="btn" id="b-alta" onclick="altaCliente()">Registrar tarjeta</button>
+    </div>
+    <div class="card">
+      <h2>2. Bienvenida por WhatsApp</h2>
+      <p class="muted">Al registrar, se genera el mensaje de bienvenida listo para enviar.</p>
+      <div id="a-wa"></div>
+    </div>
+  </div>
+</section>
+
+<!-- COMPRA -->
+<section class="tab" id="t-compra">
+  <div class="grid g2">
+    <div class="card">
+      <h2>Registrar compra</h2>
+      <label>Folio de tarjeta</label><input id="c-folio" list="dl-folios" placeholder="Buscar folio o nombre" oninput="infoCli('c')">
+      <div id="c-info"></div>
+      <div class="row">
+        <div><label>Fecha</label><input type="date" id="c-fecha"></div>
+        <div><label>Folio de factura</label><input id="c-fac" placeholder="AF001828" style="text-transform:uppercase"></div>
+      </div>
+      <label>Importe con IVA</label><input type="number" step="0.01" id="c-imp" oninput="calcPts()">
+      <div class="calc">Puntos a otorgar (1%): <b id="c-pts">0.00</b></div>
+      <br><button class="btn" id="b-compra" onclick="regCompra()">Registrar compra</button>
+    </div>
+    <div class="card"><h2>Notificación WhatsApp</h2><div id="c-wa" class="muted">Se mostrará al registrar la compra.</div></div>
+  </div>
+</section>
+
+<!-- CANJE -->
+<section class="tab" id="t-canje">
+  <div class="grid g2">
+    <div class="card">
+      <h2>Canjear puntos</h2>
+      <label>Folio de tarjeta</label><input id="k-folio" list="dl-folios" placeholder="Buscar folio o nombre" oninput="infoCli('k')">
+      <div id="k-info"></div>
+      <label>Fecha</label><input type="date" id="k-fecha">
+      <label>Uso de puntos</label>
+      <div class="chips">
+        <label><input type="radio" name="k-tipo" value="Compra" checked onchange="tipoCanje()">💲 Descuento en compra</label>
+        <label><input type="radio" name="k-tipo" value="Artículo publicitario" onchange="tipoCanje()">🧢 Artículo publicitario</label>
+      </div>
+      <div id="k-fac-w"><label>Folio de factura donde se aplica</label><input id="k-fac" style="text-transform:uppercase"></div>
+      <div id="k-art-w" style="display:none"><label>Artículo</label>
+        <select id="k-art"><option>Gorra</option><option>Playera</option><option>Termo</option><option>Llavero</option><option>Otro</option></select></div>
+      <label>Puntos a utilizar</label>
+      <div style="display:flex;gap:8px"><input type="number" step="0.01" id="k-pts" oninput="calcSaldo()"><button class="btn o" onclick="usarTodo()">Todo</button></div>
+      <div class="calc">Saldo después del canje: <b id="k-rest">—</b></div>
+      <br><button class="btn" id="b-canje" onclick="regCanje()">Registrar canje</button>
+    </div>
+    <div class="card"><h2>Notificación WhatsApp</h2><div id="k-wa" class="muted">Se mostrará al registrar el canje.</div></div>
+  </div>
+</section>
+
+<!-- CLIENTES -->
+<section class="tab" id="t-clientes">
+  <div class="card">
+    <div class="filters">
+      <div><label>Buscar</label><input id="f-cli" placeholder="Nombre, folio, teléfono, base" oninput="tablaClientes()"></div>
+      <div><label>Vendedor</label><select id="f-cli-v" onchange="tablaClientes()"></select></div>
+      <div><label>Estado</label><select id="f-cli-e" onchange="tablaClientes()"><option value="">Todos</option><option value="sin">Sin compras</option><option value="act">Con compras</option><option value="saldo">Con saldo</option></select></div>
+      <button class="btn o" onclick="exportar('clientes')">⬇ CSV</button>
+    </div>
+    <div class="tw"><table id="tb-cli"></table></div>
+  </div>
+</section>
+
+<!-- MOVIMIENTOS -->
+<section class="tab" id="t-movs">
+  <div class="card">
+    <div class="filters">
+      <div><label>Desde</label><input type="date" id="f-m-d" onchange="tablaMovs()"></div>
+      <div><label>Hasta</label><input type="date" id="f-m-h" onchange="tablaMovs()"></div>
+      <div><label>Tipo</label><select id="f-m-t" onchange="tablaMovs()"><option value="">Todos</option><option>COMPRA</option><option>CANJE</option><option value="ANULADO">Anulados</option></select></div>
+      <div><label>Vendedor</label><select id="f-m-v" onchange="tablaMovs()"></select></div>
+      <button class="btn o" onclick="exportar('movs')">⬇ CSV</button>
+    </div>
+    <div class="tw"><table id="tb-movs"></table></div>
+  </div>
+</section>
+
+<!-- REPORTES -->
+<section class="tab" id="t-reportes">
+  <div class="card" style="margin-bottom:16px">
+    <div class="filters">
+      <div><label>Desde</label><input type="date" id="f-r-d" onchange="reportes()"></div>
+      <div><label>Hasta</label><input type="date" id="f-r-h" onchange="reportes()"></div>
+      <div><label>Zona</label><select id="f-r-z" onchange="reportes()"><option value="">Todas</option><option>Tulancingo</option><option>Poza Rica</option></select></div>
+      <button class="btn o" onclick="exportar('rep')">⬇ CSV</button>
+    </div>
+    <div class="kpis" id="r-kpis"></div>
+    <h2 style="font-size:15px;color:var(--navy);margin:6px 0 10px">Por vendedor: facturación y puntos</h2>
+    <div class="tw"><table id="tb-rep"></table></div>
+  </div>
+  <div class="grid g2">
+    <div class="card"><h2>Top clientes por facturación</h2><div class="tw" style="max-height:380px"><table id="tb-top"></table></div></div>
+    <div class="card"><h2>Canjes por tipo / artículo</h2><div class="tw" style="max-height:380px"><table id="tb-canjes"></table></div></div>
+  </div>
+</section>
+</main>
+
+<datalist id="dl-folios"></datalist>
+<div class="modal" id="modal" onclick="if(event.target===this)this.classList.remove('on')"><div class="card" id="modal-c"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ====== CONFIGURA AQUÍ LA URL DE TU APPS SCRIPT ====== */
+const API_URL = 'PEGA_AQUI_TU_URL_DE_APPS_SCRIPT/exec';
+
+let DB = {vendedores:[],clientes:[],movimientos:[],config:{porcentaje:.01,comprasMinCanje:2}};
+const $ = id => document.getElementById(id);
+const money = n => '$' + Number(n||0).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
+const num = n => Number(n||0).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
+const hoy = () => new Date().toLocaleDateString('en-CA');
+const fdate = s => s ? s.split('-').reverse().join('/') : '';
+const r2 = n => Math.round(n*100)/100;
+
+/* ---------- NAV ---------- */
+$('nav').onclick = e => {
+  const t = e.target.dataset.t; if(!t) return;
+  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
+  document.querySelectorAll('.tab').forEach(s=>s.classList.toggle('on',s.id==='t-'+t));
+};
+
+function toast(m, err){ const t=$('toast'); t.textContent=m; t.className='toast'+(err?' err':''); t.style.display='block'; clearTimeout(t._t); t._t=setTimeout(()=>t.style.display='none',4000); }
+
+/* ---------- API ---------- */
+async function cargar(){
+  try{
+    const r = await fetch(API_URL+'?action=init').then(r=>r.json());
+    if(!r.ok) throw new Error(r.error);
+    DB = r; render();
+  }catch(e){ toast('No se pudo cargar: '+e.message, true); }
+}
+async function post(data, btn){
+  btn.disabled = true;
+  try{
+    data.usuario = $('usuario').value;
+    const r = await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(data)}).then(r=>r.json());
+    if(!r.ok) throw new Error(r.error);
+    DB = r; render(); toast(r.mensaje); return r;
+  }catch(e){ toast(e.message, true); return null; }
+  finally{ btn.disabled = false; }
+}
+
+/* ---------- CÁLCULOS ---------- */
+function vigentes(){ return DB.movimientos.filter(m=>m.Tipo==='COMPRA'||m.Tipo==='CANJE'); }
+function estadoCli(folio){
+  const ms = vigentes().filter(m=>m.Folio===folio);
+  const c = ms.filter(m=>m.Tipo==='COMPRA'), k = ms.filter(m=>m.Tipo==='CANJE');
+  return {
+    compras:c.length, facturado:c.reduce((a,m)=>a+Number(m.Importe||0),0),
+    ganados:r2(c.reduce((a,m)=>a+Number(m.Puntos||0),0)),
+    usados:r2(-k.reduce((a,m)=>a+Number(m.Puntos||0),0)),
+    saldo:r2(ms.reduce((a,m)=>a+Number(m.Puntos||0),0)),
+    ultima:[...c].sort((a,b)=>b.Fecha.localeCompare(a.Fecha))[0]?.Fecha||''
+  };
+}
+const cli = f => DB.clientes.find(c=>c.Folio===String(f||'').trim().toUpperCase().split(' ')[0]);
+const vendDe = pref => DB.vendedores.find(v=>v.Prefijo===pref);
+
+/* ---------- WHATSAPP ---------- */
+function waBox(tel, msg){
+  const url = 'https://wa.me/52'+tel+'?text='+encodeURIComponent(msg);
+  return `<div class="wa">${msg.replace(/</g,'&lt;')}</div><br><a class="btn g" href="${url}" target="_blank" style="text-decoration:none;display:inline-block">Enviar por WhatsApp</a>`;
+}
+function firma(c){ const v=vendDe(c.Prefijo); return v?`\n\nTu asesor: ${v.Asesor}\nCel. ${v.Celular}`:''; }
+
+/* ---------- RENDER ---------- */
+function render(){
+  // selects
+  const vOpts = DB.vendedores.map(v=>`<option value="${v.Prefijo}">${v.Prefijo} · ${v.Vendedor}</option>`).join('');
+  const keep = (id,html)=>{ const s=$(id), val=s.value; s.innerHTML=html; if(val) s.value=val; };
+  keep('a-vend', vOpts); sugerirFolio();
+  ['f-cli-v','f-m-v'].forEach(id=>keep(id,'<option value="">Todos</option>'+vOpts));
+  const asesores=[...new Set(DB.vendedores.flatMap(v=>[v.Vendedor.replace(/\s*\(.*|\s*-.*/,''),v.Asesor]))];
+  const u=$('usuario'), uv=u.value||localStorage.getItem('cf-user')||'';
+  u.innerHTML='<option value="">¿Quién registra?</option>'+asesores.map(a=>`<option>${a}</option>`).join('')+'<option>Administración</option>';
+  u.value=uv;
+  $('dl-folios').innerHTML = DB.clientes.map(c=>`<option value="${c.Folio} · ${c.Nombre}">`).join('');
+  resumen(); tablaClientes(); tablaMovs(); reportes();
+  infoCli('c'); infoCli('k');
+}
+$('usuario').onchange=e=>localStorage.setItem('cf-user',e.target.value);
+
+function resumen(){
+  const v=vigentes(), c=v.filter(m=>m.Tipo==='COMPRA'), k=v.filter(m=>m.Tipo==='CANJE');
+  const tot=DB.vendedores.reduce((a,x)=>a+Number(x.Cantidad),0);
+  const fac=c.reduce((a,m)=>a+Number(m.Importe),0), em=c.reduce((a,m)=>a+Number(m.Puntos),0), us=-k.reduce((a,m)=>a+Number(m.Puntos),0);
+  const activos=new Set(c.map(m=>m.Folio)).size;
+  $('kpis').innerHTML=[
+    [DB.clientes.length+' / '+tot,'Tarjetas entregadas'],[activos,'Clientes con compra'],
+    [c.length,'Compras registradas'],[money(fac),'Facturación con tarjeta'],
+    [num(em),'Puntos emitidos'],[num(us),'Puntos canjeados'],[num(em-us),'Puntos en circulación']
+  ].map(([b,s])=>`<div class="kpi"><b>${b}</b><span>${s}</span></div>`).join('');
+  $('avance').innerHTML=DB.vendedores.map(x=>{
+    const n=DB.clientes.filter(c=>c.Prefijo===x.Prefijo).length, p=Math.min(100,n/x.Cantidad*100);
+    return `<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:13px"><span><b>${x.Prefijo}</b> ${x.Vendedor}</span><span>${n}/${x.Cantidad}</span></div><div class="bar"><i style="width:${p}%"></i></div></div>`;
+  }).join('');
+  const ult=[...DB.movimientos].reverse().slice(0,12);
+  $('ultimos').innerHTML='<tr><th>Fecha</th><th>Folio</th><th>Tipo</th><th class="n">Puntos</th></tr>'+ult.map(m=>`<tr><td>${fdate(m.Fecha)}</td><td>${m.Folio}</td><td>${pill(m.Tipo)}</td><td class="n">${num(m.Puntos)}</td></tr>`).join('');
+}
+const pill=t=>t==='COMPRA'?'<span class="pill p-c">COMPRA</span>':t==='CANJE'?'<span class="pill p-x">CANJE</span>':'<span class="pill p-a">ANULADO</span>';
+
+/* ---------- ALTA ---------- */
+function sugerirFolio(){
+  const p=$('a-vend').value, v=vendDe(p); if(!v) return;
+  const usados=DB.clientes.filter(c=>c.Prefijo===p).map(c=>+c.Folio.slice(4));
+  let n=1; while(usados.includes(n)) n++;
+  $('a-folio').value = n<=v.Cantidad ? p+'-'+String(n).padStart(3,'0') : '';
+  $('a-hint').textContent = `${usados.length} de ${v.Cantidad} tarjetas registradas · rango ${p}-001 a ${p}-${String(v.Cantidad).padStart(3,'0')}`;
+}
+async function altaCliente(){
+  if(!$('usuario').value) return toast('Selecciona quién registra (arriba a la derecha)',true);
+  const d={action:'registrarCliente',folio:$('a-folio').value,nombre:$('a-nombre').value,telefono:$('a-tel').value,fecha:$('a-fecha').value,
+    base:$('a-base').value,tipoCliente:$('a-tipo').value,tipoPrecio:$('a-precio').value,unidades:$('a-unid').value,notas:$('a-notas').value};
+  const r=await post(d,$('b-alta')); if(!r) return;
+  const c=cli(r.folio);
+  const msg=`¡Hola ${c.Nombre}! 👋\nBienvenido al sistema de recompensas de *Grupo Llanterama*.\n\nTu tarjeta Cliente Frecuente es la *${c.Folio}*.\nCompra, acumula puntos y canjéalos por artículos promocionales o paga tus próximas compras.\n\nPor cada compra acumulas el 1% en puntos. Solo pide en el punto de venta que registren tu compra.`+firma(c);
+  $('a-wa').innerHTML=waBox(c.Telefono,msg);
+  ['a-nombre','a-tel','a-base','a-unid','a-notas'].forEach(i=>$(i).value='');
+}
+
+/* ---------- COMPRA / CANJE ---------- */
+function infoCli(p){
+  const c=cli($(p+'-folio').value), box=$(p+'-info');
+  if(!c){ box.innerHTML=$(p+'-folio').value?'<div class="cli-box muted">Tarjeta no registrada</div>':''; if(p==='k')calcSaldo(); return; }
+  const e=estadoCli(c.Folio);
+  const puede = e.compras>=DB.config.comprasMinCanje;
+  box.innerHTML=`<div class="cli-box"><b>${c.Nombre}</b> · ${c.Telefono}<br>${c['Base / Empresa']||''} ${c['Tipo Cliente']?'· '+c['Tipo Cliente']:''} · ${c['Tipo Precio']||''}<br>
+  Vendedor: ${c.Vendedor}<br>Compras: <b>${e.compras}</b> · Facturado: <b>${money(e.facturado)}</b><br>Saldo: <b style="font-size:16px">${num(e.saldo)} pts</b>
+  ${p==='k'&&!puede?`<br><span style="color:var(--red);font-weight:600">⚠ Podrá canjear a partir de su compra #${DB.config.comprasMinCanje}</span>`:''}</div>`;
+  if(p==='k') calcSaldo();
+}
+function calcPts(){ $('c-pts').textContent=num(r2(Number($('c-imp').value||0)*DB.config.porcentaje)); }
+async function regCompra(){
+  if(!$('usuario').value) return toast('Selecciona quién registra',true);
+  const c=cli($('c-folio').value); if(!c) return toast('Selecciona una tarjeta registrada',true);
+  const r=await post({action:'registrarCompra',folio:c.Folio,fecha:$('c-fecha').value,factura:$('c-fac').value,importe:$('c-imp').value},$('b-compra')); if(!r) return;
+  const msg=`¡Gracias por comprar en *GRUPO LLANTERAMA*! 🛞\n\nTarjeta: ${c.Folio}\nFactura: ${$('c-fac').value.toUpperCase()}\nImporte: ${money($('c-imp').value)}\nPuntos ganados: *${num(r.puntos)}*\n\nPuntos acumulados: *${num(r.saldo)}*`+(estadoCli(c.Folio).compras>=DB.config.comprasMinCanje?'\n\n✅ Ya puedes usar tus puntos en tu próxima compra o canjearlos por artículos promocionales.':'')+firma(c);
+  $('c-wa').innerHTML=waBox(c.Telefono,msg);
+  $('c-fac').value=''; $('c-imp').value=''; calcPts();
+}
+function tipoCanje(){ const t=document.querySelector('[name=k-tipo]:checked').value; $('k-fac-w').style.display=t==='Compra'?'':'none'; $('k-art-w').style.display=t==='Compra'?'none':''; }
+function usarTodo(){ const c=cli($('k-folio').value); if(c){$('k-pts').value=estadoCli(c.Folio).saldo; calcSaldo();} }
+function calcSaldo(){ const c=cli($('k-folio').value); $('k-rest').textContent=c?num(estadoCli(c.Folio).saldo-Number($('k-pts').value||0)):'—'; }
+async function regCanje(){
+  if(!$('usuario').value) return toast('Selecciona quién registra',true);
+  const c=cli($('k-folio').value); if(!c) return toast('Selecciona una tarjeta registrada',true);
+  const t=document.querySelector('[name=k-tipo]:checked').value;
+  const d={action:'registrarCanje',folio:c.Folio,fecha:$('k-fecha').value,tipoCanje:t,puntos:$('k-pts').value,factura:t==='Compra'?$('k-fac').value:'',articulo:t==='Compra'?'':$('k-art').value};
+  const r=await post(d,$('b-canje')); if(!r) return;
+  const det=t==='Compra'?`Descuento de ${money(d.puntos)} aplicado en factura ${d.factura.toUpperCase()}`:`Artículo canjeado: ${d.articulo}`;
+  const msg=`*GRUPO LLANTERAMA* · Canje de puntos 🎁\n\nTarjeta: ${c.Folio}\nPuntos utilizados: *${num(d.puntos)}*\n${det}\n\nSaldo en puntos: *${num(r.saldo)}*\n\n¡Sigue comprando y acumulando!`+firma(c);
+  $('k-wa').innerHTML=waBox(c.Telefono,msg);
+  $('k-pts').value=''; $('k-fac').value='';
+}
+
+/* ---------- TABLAS ---------- */
+let CLI_ROWS=[], MOV_ROWS=[], REP_ROWS=[];
+function tablaClientes(){
+  const q=$('f-cli').value.toLowerCase(), v=$('f-cli-v').value, e=$('f-cli-e').value;
+  CLI_ROWS=DB.clientes.map(c=>({...c,...estadoCli(c.Folio)})).filter(c=>
+    (!v||c.Prefijo===v) && (!q||[c.Folio,c.Nombre,c.Telefono,c['Base / Empresa']].join(' ').toLowerCase().includes(q)) &&
+    (!e||(e==='sin'&&!c.compras)||(e==='act'&&c.compras)||(e==='saldo'&&c.saldo>0)));
+  $('tb-cli').innerHTML='<tr><th>Folio</th><th>Cliente</th><th>Teléfono</th><th>Base</th><th>Tipo</th><th>Precio</th><th>Vendedor</th><th>Alta</th><th class="n">Compras</th><th class="n">Facturado</th><th class="n">Ganados</th><th class="n">Usados</th><th class="n">Saldo</th><th>Última compra</th></tr>'+
+  CLI_ROWS.map(c=>`<tr class="click" onclick="detalle('${c.Folio}')"><td><b>${c.Folio}</b></td><td>${c.Nombre}</td><td>${c.Telefono}</td><td>${c['Base / Empresa']||''}</td><td>${c['Tipo Cliente']||''}</td><td>${c['Tipo Precio']||''}</td><td>${c.Prefijo}</td><td>${fdate(c['Fecha Alta'])}</td><td class="n">${c.compras}</td><td class="n">${money(c.facturado)}</td><td class="n">${num(c.ganados)}</td><td class="n">${num(c.usados)}</td><td class="n"><b>${num(c.saldo)}</b></td><td>${fdate(c.ultima)}</td></tr>`).join('');
+}
+function filtroFecha(m,d,h){ return (!d||m.Fecha>=d)&&(!h||m.Fecha<=h); }
+function tablaMovs(){
+  const d=$('f-m-d').value,h=$('f-m-h').value,t=$('f-m-t').value,v=$('f-m-v').value;
+  MOV_ROWS=[...DB.movimientos].reverse().filter(m=>filtroFecha(m,d,h)&&(!t||m.Tipo.startsWith(t))&&(!v||m.Folio.startsWith(v)))
+    .map(m=>({...m,Cliente:cli(m.Folio)?.Nombre||''}));
+  $('tb-movs').innerHTML='<tr><th>Fecha</th><th>Folio</th><th>Cliente</th><th>Tipo</th><th>Factura</th><th class="n">Importe</th><th class="n">Puntos</th><th>Uso</th><th>Artículo</th><th>Registró</th><th></th></tr>'+
+  MOV_ROWS.map(m=>`<tr><td>${fdate(m.Fecha)}</td><td>${m.Folio}</td><td>${m.Cliente}</td><td>${pill(m.Tipo)}</td><td>${m['Folio Factura']||''}</td><td class="n">${m.Importe?money(m.Importe):''}</td><td class="n" style="color:${m.Puntos<0?'var(--red)':'var(--ok)'}">${num(m.Puntos)}</td><td>${m['Tipo Canje']||''}</td><td>${m['Artículo']||''}</td><td>${m['Registró']||''}</td><td>${m.Tipo.startsWith('ANULADO')?'':`<button class="btn o sm" onclick="anular('${m.ID}')">Anular</button>`}</td></tr>`).join('');
+}
+async function anular(id){
+  const motivo=prompt('Motivo de la anulación (ej. factura capturada mal):'); if(!motivo) return;
+  await post({action:'anularMovimiento',id,motivo},{disabled:false});
+}
+
+/* ---------- DETALLE CLIENTE ---------- */
+function detalle(folio){
+  const c=cli(folio), e=estadoCli(folio), v=vendDe(c.Prefijo);
+  const ms=DB.movimientos.filter(m=>m.Folio===folio).sort((a,b)=>a.Fecha.localeCompare(b.Fecha));
+  let s=0;
+  $('modal-c').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:start"><h2>${c.Folio} · ${c.Nombre}</h2><button class="btn o sm" onclick="$('modal').classList.remove('on')">✕</button></div>
+  <div class="cli-box">📱 ${c.Telefono} · ${c['Base / Empresa']||'—'} · ${c['Tipo Cliente']||''} · ${c['Tipo Precio']||''} · ${c.Unidades||'?'} unidades<br>Alta: ${fdate(c['Fecha Alta'])} · Vendedor: ${c.Vendedor} · Asesor: ${v?.Asesor||''}</div>
+  <div class="kpis" style="margin-top:14px">${[[e.compras,'Compras'],[money(e.facturado),'Facturado'],[num(e.ganados),'Pts ganados'],[num(e.usados),'Pts usados'],[num(e.saldo),'Saldo']].map(([b,x])=>`<div class="kpi"><b>${b}</b><span>${x}</span></div>`).join('')}</div>
+  <div class="tw"><table><tr><th>Fecha</th><th>Tipo</th><th>Factura</th><th class="n">Importe</th><th class="n">Puntos</th><th>Detalle</th><th class="n">Saldo</th></tr>
+  ${ms.map(m=>{ if(!m.Tipo.startsWith('ANULADO')) s=r2(s+Number(m.Puntos)); return `<tr><td>${fdate(m.Fecha)}</td><td>${pill(m.Tipo)}</td><td>${m['Folio Factura']||''}</td><td class="n">${m.Importe?money(m.Importe):''}</td><td class="n">${num(m.Puntos)}</td><td>${m['Tipo Canje']||''} ${m['Artículo']||''}</td><td class="n"><b>${num(s)}</b></td></tr>`;}).join('')}</table></div>
+  <br>${waBox(c.Telefono,`Hola ${c.Nombre}, te compartimos tu estado de cuenta *Cliente Frecuente Grupo Llanterama* (${c.Folio}):\n\nCompras: ${e.compras}\nPuntos acumulados: ${num(e.ganados)}\nPuntos utilizados: ${num(e.usados)}\n*Saldo disponible: ${num(e.saldo)} puntos*`+firma(c))}`;
+  $('modal').classList.add('on');
+}
+
+/* ---------- REPORTES ---------- */
+function reportes(){
+  const d=$('f-r-d').value,h=$('f-r-h').value,z=$('f-r-z').value;
+  const vs=DB.vendedores.filter(v=>!z||v.Zona===z), prefs=vs.map(v=>v.Prefijo);
+  const ms=vigentes().filter(m=>filtroFecha(m,d,h)&&prefs.includes(m.Folio.slice(0,3)));
+  REP_ROWS=vs.map(v=>{
+    const mm=ms.filter(m=>m.Folio.startsWith(v.Prefijo)), c=mm.filter(m=>m.Tipo==='COMPRA'), k=mm.filter(m=>m.Tipo==='CANJE');
+    const tarj=DB.clientes.filter(x=>x.Prefijo===v.Prefijo).length;
+    const fac=c.reduce((a,m)=>a+Number(m.Importe),0), em=c.reduce((a,m)=>a+Number(m.Puntos),0), us=-k.reduce((a,m)=>a+Number(m.Puntos),0);
+    return {Prefijo:v.Prefijo,Vendedor:v.Vendedor,Zona:v.Zona,Asignadas:v.Cantidad,Entregadas:tarj,Activos:new Set(c.map(m=>m.Folio)).size,Compras:c.length,Facturacion:fac,Ticket:c.length?fac/c.length:0,Emitidos:r2(em),Canjeados:r2(us),Saldo:r2(em-us)};
+  });
+  const T=k=>REP_ROWS.reduce((a,r)=>a+r[k],0);
+  $('r-kpis').innerHTML=[[T('Entregadas'),'Tarjetas entregadas'],[T('Activos'),'Clientes activos'],[T('Compras'),'Compras'],[money(T('Facturacion')),'Facturación'],[money(T('Compras')?T('Facturacion')/T('Compras'):0),'Ticket promedio'],[num(T('Emitidos')),'Puntos emitidos (1%)'],[num(T('Canjeados')),'Puntos canjeados'],[num(T('Saldo')),'Pasivo en puntos']].map(([b,s])=>`<div class="kpi"><b>${b}</b><span>${s}</span></div>`).join('');
+  $('tb-rep').innerHTML='<tr><th>Vendedor</th><th>Zona</th><th class="n">Asignadas</th><th class="n">Entregadas</th><th class="n">% Entrega</th><th class="n">Activos</th><th class="n">Compras</th><th class="n">Facturación</th><th class="n">Ticket prom.</th><th class="n">Pts emitidos</th><th class="n">Pts canjeados</th><th class="n">Saldo pts</th></tr>'+
+    REP_ROWS.map(r=>`<tr><td><b>${r.Prefijo}</b> ${r.Vendedor}</td><td>${r.Zona}</td><td class="n">${r.Asignadas}</td><td class="n">${r.Entregadas}</td><td class="n">${(r.Entregadas/r.Asignadas*100).toFixed(0)}%</td><td class="n">${r.Activos}</td><td class="n">${r.Compras}</td><td class="n">${money(r.Facturacion)}</td><td class="n">${money(r.Ticket)}</td><td class="n">${num(r.Emitidos)}</td><td class="n">${num(r.Canjeados)}</td><td class="n"><b>${num(r.Saldo)}</b></td></tr>`).join('')+
+    `<tr style="background:#fff8dd;font-weight:700"><td>TOTAL</td><td></td><td class="n">${T('Asignadas')}</td><td class="n">${T('Entregadas')}</td><td class="n">${(T('Entregadas')/T('Asignadas')*100||0).toFixed(0)}%</td><td class="n">${T('Activos')}</td><td class="n">${T('Compras')}</td><td class="n">${money(T('Facturacion'))}</td><td></td><td class="n">${num(T('Emitidos'))}</td><td class="n">${num(T('Canjeados'))}</td><td class="n">${num(T('Saldo'))}</td></tr>`;
+  const porCli={};
+  ms.filter(m=>m.Tipo==='COMPRA').forEach(m=>{(porCli[m.Folio]??={f:m.Folio,n:0,t:0}); porCli[m.Folio].n++; porCli[m.Folio].t+=Number(m.Importe);});
+  $('tb-top').innerHTML='<tr><th>Folio</th><th>Cliente</th><th class="n">Compras</th><th class="n">Facturado</th></tr>'+Object.values(porCli).sort((a,b)=>b.t-a.t).slice(0,20).map(x=>`<tr class="click" onclick="detalle('${x.f}')"><td>${x.f}</td><td>${cli(x.f)?.Nombre||''}</td><td class="n">${x.n}</td><td class="n">${money(x.t)}</td></tr>`).join('');
+  const porK={};
+  ms.filter(m=>m.Tipo==='CANJE').forEach(m=>{const k=m['Tipo Canje']+(m['Artículo']?' · '+m['Artículo']:''); (porK[k]??={n:0,p:0}); porK[k].n++; porK[k].p+=-Number(m.Puntos);});
+  $('tb-canjes').innerHTML='<tr><th>Tipo / artículo</th><th class="n">Canjes</th><th class="n">Puntos</th></tr>'+Object.entries(porK).map(([k,x])=>`<tr><td>${k}</td><td class="n">${x.n}</td><td class="n">${num(x.p)}</td></tr>`).join('');
+}
+
+/* ---------- EXPORTAR ---------- */
+function exportar(t){
+  const rows = t==='clientes'?CLI_ROWS:t==='movs'?MOV_ROWS:REP_ROWS; if(!rows.length) return toast('Sin datos',true);
+  const keys=Object.keys(rows[0]);
+  const csv='\ufeff'+[keys.join(','),...rows.map(r=>keys.map(k=>`"${String(r[k]??'').replace(/"/g,'""')}"`).join(','))].join('\n');
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download=`cliente-frecuente-${t}-${hoy()}.csv`; a.click();
+}
+
+/* ---------- INIT ---------- */
+['a-fecha','c-fecha','k-fecha'].forEach(i=>$(i).value=hoy());
+$('k-folio').addEventListener('change',()=>infoCli('k'));
+cargar();
+</script>
+</body>
+</html>
