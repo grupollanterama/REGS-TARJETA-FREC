@@ -56,6 +56,13 @@ tr.click{cursor:pointer}tr.click:hover td{background:#fffbea}
 .wa{background:#e9fbe9;border-radius:10px;padding:12px;margin-top:12px;font-size:13px;white-space:pre-wrap}
 .bar{height:8px;background:#eef1f6;border-radius:4px;overflow:hidden}.bar i{display:block;height:100%;background:var(--yellow)}
 .muted{color:var(--mut);font-size:12px}
+#t-clientes .tw{max-height:none;overflow:visible;border:0}
+#tb-cli{font-size:12px}
+#tb-cli th{position:static;white-space:normal;padding:8px 6px;font-size:11px}
+#tb-cli td{white-space:normal;padding:7px 6px;vertical-align:top}
+#tb-cli td.n{white-space:nowrap}
+body:has(#t-clientes.on) main{max-width:none}
+@media(max-width:900px){#t-clientes .tw{overflow-x:auto}#tb-cli td{white-space:nowrap}}
 @media(max-width:600px){.row{grid-template-columns:1fr}header h1{font-size:17px}}
 </style>
 </head>
@@ -70,7 +77,6 @@ tr.click{cursor:pointer}tr.click:hover td{background:#fffbea}
 <nav id="nav">
   <button data-t="inicio" class="on">Resumen</button>
   <button data-t="alta">Alta de tarjeta</button>
-  <button data-t="compra">Registrar compra</button>
   <button data-t="canje">Canjear puntos</button>
   <button data-t="clientes">Clientes</button>
   <button data-t="movs">Movimientos</button>
@@ -260,8 +266,8 @@ const ARTICULOS = [
 ];
 
 /* Links que se incluyen en los mensajes */
-const PROMO_URL = 'PEGA_AQUI_EL_LINK_DE_PROMOCIONES';               // página de promociones del mes (la del QR)
-const CONSULTA_URL = 'PEGA_AQUI_EL_LINK_DE/consulta.html';          // página donde el cliente consulta sus puntos
+const PROMO_URL = 'https://grupollanterama.github.io/promos/';      // página de promociones del mes (la del QR)
+const CONSULTA_URL = 'https://grupollanterama.github.io/puntos/';   // página donde el cliente consulta sus puntos
 
 /* Descuentos especiales de la tarjeta Cliente Frecuente */
 const DESCUENTOS = 'Lubricantes 32% · Acumuladores 32% · Motobaterías 32% · Llantas: precio especial a consultar';
@@ -354,7 +360,7 @@ function render(){
   resumen(); tablaClientes(); tablaMovs(); reportes(); tablaPend();
   infoCli('c'); infoCli('k');
 }
-$('usuario').onchange=e=>localStorage.setItem('cf-user',e.target.value);
+$('usuario').onchange=e=>{localStorage.setItem('cf-user',e.target.value); tablaMovs(); if(CONCIL.length) tablaConcil();};
 
 function resumen(){
   const v=vigentes(), c=v.filter(m=>m.Tipo==='COMPRA'), k=v.filter(m=>m.Tipo==='CANJE');
@@ -447,7 +453,7 @@ function tablaMovs(){
   MOV_ROWS=[...DB.movimientos].reverse().filter(m=>filtroFecha(m,d,h)&&(!t||m.Tipo.startsWith(t))&&(!v||m.Folio.startsWith(v)))
     .map(m=>({...m,Cliente:cli(m.Folio)?.Nombre||''}));
   $('tb-movs').innerHTML='<tr><th>Fecha</th><th>Folio</th><th>Cliente</th><th>Tipo</th><th>Factura</th><th class="n">Importe</th><th class="n">Puntos</th><th>Uso</th><th>Artículo</th><th>Registró</th><th>WhatsApp</th><th></th></tr>'+
-  MOV_ROWS.map(m=>`<tr><td>${fdate(m.Fecha)}</td><td>${m.Folio}</td><td>${m.Cliente}</td><td>${pill(m.Tipo)}</td><td>${m['Folio Factura']||''}</td><td class="n">${m.Importe?money(m.Importe):''}</td><td class="n" style="color:${m.Puntos<0?'var(--red)':'var(--ok)'}">${num(m.Puntos)}</td><td>${m['Tipo Canje']||''}</td><td>${m['Artículo']||''}</td><td>${m['Registró']||''}</td><td>${String(m.WhatsApp||'').startsWith('ENVIADO')?'✅':'⏳'}</td><td>${m.Tipo.startsWith('ANULADO')?'':`<button class="btn o sm" onclick="anular('${m.ID}')">Anular</button>`}</td></tr>`).join('');
+  MOV_ROWS.map(m=>`<tr><td>${fdate(m.Fecha)}</td><td>${m.Folio}</td><td>${m.Cliente}</td><td>${pill(m.Tipo)}</td><td>${m['Folio Factura']||''}</td><td class="n">${m.Importe?money(m.Importe):''}</td><td class="n" style="color:${m.Puntos<0?'var(--red)':'var(--ok)'}">${num(m.Puntos)}</td><td>${m['Tipo Canje']||''}</td><td>${m['Artículo']||''}</td><td>${m['Registró']||''}</td><td>${String(m.WhatsApp||'').startsWith('ENVIADO')?'✅':'⏳'}</td><td>${m.Tipo.startsWith('ANULADO')||$('usuario').value!=='Administración'?'':`<button class="btn o sm" onclick="anular('${m.ID}')">Anular</button>`}</td></tr>`).join('');
 }
 async function anular(id){
   const motivo=prompt('Motivo de la anulación (ej. factura capturada mal):'); if(!motivo) return;
@@ -547,7 +553,7 @@ function tablaConcil(){
   $('co-kpis').innerHTML=[[cnt('OK'),'✅ Cuadran'],[cnt('DIFERENCIA'),'⚠️ Con diferencia'],[cnt('NO_ENCONTRADA'),'❌ No existen en PV'],[cnt('NO_REGISTRADA'),'🔍 Compras sin registrar'],[num(pend),'Puntos que se le deben a clientes']].map(([b,s])=>`<div class="kpi"><b>${b}</b><span>${s}</span></div>`).join('');
   $('tb-concil').innerHTML='<tr><th>Estado</th><th>Folio</th><th>Cliente</th><th>Código</th><th>BD</th><th>Factura</th><th>Fecha reg.</th><th>Fecha PV</th><th class="n">Importe reg.</th><th class="n">Importe PV (c/IVA)</th><th>Detalle</th><th></th></tr>'+
   CO_ROWS.map((x,i)=>`<tr><td><span class="pill ${CO_EST[x.estado][1]}">${CO_EST[x.estado][0]}</span></td><td><b>${x.folio}</b></td><td>${x.cliente}</td><td>${x.codigo||''}</td><td>${x.bd}</td><td>${x.factura}</td><td>${fdate(x.fechaReg)}</td><td>${fdate(x.fechaPV)}</td><td class="n">${x.importeReg!=null?money(x.importeReg):''}</td><td class="n">${x.importePV!=null?money(x.importePV):''}</td><td style="white-space:normal;min-width:220px">${x.detalle}</td><td>${
-    x.estado==='NO_ENCONTRADA'||x.estado==='DIFERENCIA'?`<button class="btn o sm" onclick="anular('${x.id}')">Anular</button>`:''}</td></tr>`).join('');
+    (x.estado==='NO_ENCONTRADA'||x.estado==='DIFERENCIA')&&$('usuario').value==='Administración'?`<button class="btn o sm" onclick="anular('${x.id}')">Anular</button>`:''}</td></tr>`).join('');
 }
 async function registrarTodas(){
   if(!$('usuario').value) return toast('Selecciona quién registra',true);
