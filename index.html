@@ -232,7 +232,6 @@ tr.click{cursor:pointer}tr.click:hover td{background:#fffbea}
     <p class="muted" style="margin-bottom:12px">Pega el reporte de ventas en la hoja correspondiente del Sheet y presiona Conciliar. Cruza por folio de factura y código de cliente.</p>
     <div class="filters">
       <button class="btn" id="b-concil" onclick="conciliar()">⚖ Conciliar</button>
-      <button class="btn y" id="b-todas" onclick="registrarTodas()">✔ Registrar todas las no registradas</button>
       <div><label>Estado</label><select id="f-co-e" onchange="tablaConcil()"><option value="">Todos</option><option value="OK">✅ Cuadra</option><option value="DIFERENCIA">⚠️ Diferencia</option><option value="NO_ENCONTRADA">❌ No existe en PV</option><option value="NO_REGISTRADA">🔍 No registrada</option><option value="ANTES_ALTA">🕓 Antes de la tarjeta</option><option value="SIN_VENTAS">∅ Sin ventas en BD</option></select></div>
       <div><label>Vendedor</label><select id="f-co-v" onchange="tablaConcil()"></select></div>
       <button class="btn o" onclick="exportar('concil')">⬇ CSV</button>
@@ -532,8 +531,10 @@ async function conciliar(){
   try{
     const r=await fetch(API_URL+'?action=conciliar').then(r=>r.json());
     if(!r.ok) throw new Error(r.error);
-    CONCIL=r.conciliacion; CO_INFO=r; tablaConcil();
-    toast('Conciliación lista · facturas leídas: '+Object.entries(r.facturasBD).map(([k,v])=>k+' '+v).join(', '));
+    CONCIL=r.conciliacion; CO_INFO=r;
+    if(r.clientes){ DB={vendedores:r.vendedores,clientes:r.clientes,movimientos:r.movimientos,config:r.config}; render(); }
+    tablaConcil();
+    toast((r.auto?.registradas?'✔ '+r.auto.mensaje+' · ':'')+'Facturas leídas: '+Object.entries(r.facturasBD).map(([k,v])=>k+' '+v).join(', '));
   }catch(e){ toast(e.message,true); }
   finally{ b.disabled=false; b.textContent='⚖ Conciliar'; }
 }
@@ -546,7 +547,6 @@ function tablaConcil(){
   $('co-kpis').innerHTML=[[cnt('OK'),'✅ Cuadran'],[cnt('DIFERENCIA'),'⚠️ Con diferencia'],[cnt('NO_ENCONTRADA'),'❌ No existen en PV'],[cnt('NO_REGISTRADA'),'🔍 Compras sin registrar'],[num(pend),'Puntos que se le deben a clientes']].map(([b,s])=>`<div class="kpi"><b>${b}</b><span>${s}</span></div>`).join('');
   $('tb-concil').innerHTML='<tr><th>Estado</th><th>Folio</th><th>Cliente</th><th>Código</th><th>BD</th><th>Factura</th><th>Fecha reg.</th><th>Fecha PV</th><th class="n">Importe reg.</th><th class="n">Importe PV (c/IVA)</th><th>Detalle</th><th></th></tr>'+
   CO_ROWS.map((x,i)=>`<tr><td><span class="pill ${CO_EST[x.estado][1]}">${CO_EST[x.estado][0]}</span></td><td><b>${x.folio}</b></td><td>${x.cliente}</td><td>${x.codigo||''}</td><td>${x.bd}</td><td>${x.factura}</td><td>${fdate(x.fechaReg)}</td><td>${fdate(x.fechaPV)}</td><td class="n">${x.importeReg!=null?money(x.importeReg):''}</td><td class="n">${x.importePV!=null?money(x.importePV):''}</td><td style="white-space:normal;min-width:220px">${x.detalle}</td><td>${
-    x.estado==='NO_REGISTRADA'?`<button class="btn sm" onclick="coRegistrar(${i})">Registrar</button>`:
     x.estado==='NO_ENCONTRADA'||x.estado==='DIFERENCIA'?`<button class="btn o sm" onclick="anular('${x.id}')">Anular</button>`:''}</td></tr>`).join('');
 }
 async function registrarTodas(){
