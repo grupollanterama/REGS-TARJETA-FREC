@@ -83,6 +83,50 @@ body:has(#t-clientes.on) main{max-width:none}
 @keyframes okpop{0%{transform:scale(.3);opacity:0}25%{transform:scale(1.1);opacity:1}70%{transform:scale(1);opacity:1}100%{transform:scale(1);opacity:0}}
 #live{font-size:11px;opacity:.85;display:flex;align-items:center;gap:6px}
 #live i{width:8px;height:8px;border-radius:50%;background:#4ade80;display:inline-block;box-shadow:0 0 0 3px rgba(74,222,128,.25)}
+nav button b{margin-right:6px;font-weight:400}
+.wa{word-break:break-word}
+/* ===== CELULAR ===== */
+@media(max-width:700px){
+  body{font-size:15px;padding-bottom:78px}
+  header{padding:12px 14px;flex-wrap:nowrap}
+  header h1{font-size:18px} header small{display:none}
+  header .btn{padding:8px 10px;font-size:13px}
+  #live{display:none}
+  main{padding:14px 10px 30px}
+  nav{position:fixed;bottom:0;left:0;right:0;top:auto;z-index:30;border-top:1px solid var(--line);border-bottom:0;padding:0 0 env(safe-area-inset-bottom);justify-content:space-around;box-shadow:0 -4px 16px rgba(0,0,0,.08)}
+  nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 2px 9px;font-size:10.5px;border-bottom:0;border-top:3px solid transparent;min-width:0}
+  nav button b{font-size:20px;margin:0}
+  nav button.on{border-top-color:var(--yellow);background:#fffbea}
+  .card{padding:16px;border-radius:12px}
+  .card h2{font-size:15px}
+  input,select,textarea{font-size:16px;padding:12px}
+  .btn{padding:13px 16px;font-size:15px}
+  .btn.sm{padding:8px 10px;font-size:13px}
+  #b-alta,#b-compra,#b-canje{width:100%}
+  .grid,.g2,.rgrid{grid-template-columns:1fr!important;gap:12px}
+  .kpis{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px}
+  .kpi{padding:10px 12px} .kpi b{font-size:17px!important} .kpi span{font-size:11px}
+  .filters>div{min-width:calc(50% - 5px);flex:1 1 calc(50% - 5px)}
+  .filters>.btn{flex:1}
+  .chips{flex-direction:column}
+  .wa+br+div{flex-direction:column} .wa+br+div .btn{width:100%;text-align:center}
+  .toast{bottom:90px}
+  .modal{padding:0;align-items:flex-end}
+  .modal .card{max-height:92vh;border-radius:16px 16px 0 0}
+  /* tablas como tarjetas */
+  .tw{border:0;max-height:none!important;overflow:visible!important}
+  table.cards, table.cards tbody, table.cards tr, table.cards td{display:block;width:100%}
+  table.cards tr:first-child{display:none}
+  table.cards tr{background:#fff;border:1px solid var(--line);border-radius:10px;margin-bottom:10px;padding:6px 10px}
+  table.cards td{display:flex;justify-content:space-between;gap:12px;border:0;padding:5px 0;white-space:normal!important;text-align:right}
+  table.cards td::before{content:attr(data-label);font-weight:600;color:var(--mut);text-align:left;flex-shrink:0}
+  table.cards td:empty{display:none}
+  table.cards tr[style*="fff8dd"]{background:#fff8dd}
+  table.cards td[colspan]{justify-content:center}
+  table.cards td[colspan]::before{content:none}
+  #tb-rep td:nth-child(3),#tb-rep td:nth-child(6),#tb-rep td:nth-child(7),#tb-rep td:nth-child(8){display:none}
+  #tb-rep tr{padding:4px 10px}
+}
 @media(max-width:600px){.row{grid-template-columns:1fr}header h1{font-size:17px}}
 </style>
 </head>
@@ -95,12 +139,12 @@ body:has(#t-clientes.on) main{max-width:none}
   </div>
 </header>
 <nav id="nav">
-  <button data-t="inicio" class="on">Resumen general</button>
-  <button data-t="alta">Alta de tarjeta</button>
-  <button data-t="compra">Registrar compra</button>
-  <button data-t="canje">Canjear puntos</button>
-  <button data-t="clientes">Clientes</button>
-  <button data-t="movs">Movimientos</button>
+  <button data-t="inicio" class="on"><b>📊</b><span>Resumen</span></button>
+  <button data-t="alta"><b>➕</b><span>Alta</span></button>
+  <button data-t="compra"><b>🛒</b><span>Compra</span></button>
+  <button data-t="canje"><b>🎁</b><span>Canje</span></button>
+  <button data-t="clientes"><b>👥</b><span>Clientes</span></button>
+  <button data-t="movs"><b>📋</b><span>Movs.</span></button>
 </nav>
 
 <main>
@@ -270,8 +314,6 @@ const ARTICULOS = [
 /* Links que se incluyen en los mensajes */
 const PROMO_URL = 'https://grupollanterama.github.io/promos/';      // página de promociones del mes (la del QR)
 
-/* Descuentos especiales de la tarjeta Cliente Frecuente */
-const DESCUENTOS = 'Lubricantes 32% · Acumuladores 32% · Motobaterías 32% · Llantas: precio especial a consultar';
 
 let DB = {vendedores:[],clientes:[],movimientos:[],config:{porcentaje:.01,comprasMinCanje:2}};
 const $ = id => document.getElementById(id);
@@ -283,7 +325,8 @@ const r2 = n => Math.round(n*100)/100;
 
 /* ---------- NAV ---------- */
 $('nav').onclick = e => {
-  const t = e.target.dataset.t; if(!t) return;
+  const bt = e.target.closest('button'); if(!bt) return; const t = bt.dataset.t;
+  window.scrollTo({top:0,behavior:'smooth'});
   document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
   document.querySelectorAll('.tab').forEach(s=>s.classList.toggle('on',s.id==='t-'+t));
 };
@@ -456,7 +499,7 @@ function infoCli(p){
   const e=estadoCli(c.Folio);
   const puede = e.compras>=DB.config.comprasMinCanje;
   box.innerHTML=`<div class="cli-box"><b>${c.Nombre}</b> · ${c.Telefono}<br>${c['Base / Empresa']||''} ${c['Tipo Cliente']?'· '+c['Tipo Cliente']:''}<br>
-  Vendedor: ${c.Vendedor}<br><span class="muted">${DESCUENTOS}</span><br>Compras: <b>${e.compras}</b> · Facturado: <b>${money(e.facturado)}</b><br>Saldo: <b style="font-size:16px">${num(e.saldo)} pts</b>
+  Vendedor: ${c.Vendedor}<br>Compras: <b>${e.compras}</b> · Facturado: <b>${money(e.facturado)}</b><br>Saldo: <b style="font-size:16px">${num(e.saldo)} pts</b>
   ${p==='k'&&!puede?`<br><span style="color:var(--red);font-weight:600">⚠ Aún no tiene compras registradas con puntos</span>`:''}</div>`;
   if(p==='k') calcSaldo();
 }
@@ -575,6 +618,16 @@ function exportar(t){
   const csv='\ufeff'+[keys.join(','),...rows.map(r=>keys.map(k=>`"${String(r[k]??'').replace(/"/g,'""')}"`).join(','))].join('\n');
   const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download=`cliente-frecuente-${t}-${hoy()}.csv`; a.click();
 }
+
+/* ---------- TABLAS EN CELULAR ---------- */
+function etiquetar(t){
+  const ths=[...t.querySelectorAll('tr:first-child th')].map(h=>h.textContent.trim());
+  if(!ths.length) return;
+  t.classList.add('cards');
+  t.querySelectorAll('tr').forEach((tr,i)=>{ if(i===0) return; [...tr.children].forEach((td,k)=>td.setAttribute('data-label',ths[k]||'')); });
+}
+new MutationObserver(()=>document.querySelectorAll('main table, #modal table').forEach(t=>{ if(!t._lab||t._lab!==t.innerHTML.length){ etiquetar(t); t._lab=t.innerHTML.length; } }))
+  .observe(document.body,{childList:true,subtree:true});
 
 /* ---------- INIT ---------- */
 window.addEventListener('beforeunload',e=>{ if(ALTA_PEND||COMPRA_PEND){ e.preventDefault(); e.returnValue=''; } });
