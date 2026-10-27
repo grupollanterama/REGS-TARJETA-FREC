@@ -90,7 +90,6 @@ body:has(#t-clientes.on) main{max-width:none}
 <header>
   <div><h1>Cliente <span>Frecuente</span></h1><small>Sistema de recompensas · Grupo Llanterama</small></div>
   <div style="display:flex;gap:8px;align-items:center">
-    <select id="usuario" style="width:auto;min-width:200px"></select>
     <span id="live"><i></i><span id="live-t">En vivo</span></span>
     <button class="btn y" onclick="cargar()">↻ Actualizar</button>
   </div>
@@ -309,7 +308,6 @@ document.addEventListener('visibilitychange',()=>{ if(!document.hidden) cargar(t
 async function post(data, btn){
   btn.disabled = true; OCUPADO=true;
   try{
-    data.usuario = $('usuario').value;
     const r = await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(data)}).then(r=>r.json());
     if(!r.ok) throw new Error(r.error);
     DB = r; render(); okMark(); toast('✅ Guardado · '+r.mensaje); return r;
@@ -376,15 +374,11 @@ function render(){
   const keep = (id,html)=>{ const s=$(id), val=s.value; s.innerHTML=html; if(val) s.value=val; };
   keep('a-vend', vOpts); sugerirFolio();
   ['f-cli-v','f-m-v'].forEach(id=>keep(id,'<option value="">Todos</option>'+vOpts));
-  const asesores=[...new Set(DB.vendedores.flatMap(v=>[v.Vendedor.replace(/\s*\(.*|\s*-.*/,''),v.Asesor]))];
-  const u=$('usuario'), uv=u.value||localStorage.getItem('cf-user')||'';
-  u.innerHTML='<option value="">¿Quién registra?</option>'+asesores.map(a=>`<option>${a}</option>`).join('')+'<option>Administración</option>';
-  u.value=uv;
   $('dl-folios').innerHTML = DB.clientes.map(c=>`<option value="${c.Folio} · ${c.Nombre}">`).join('');
   resumen(); tablaClientes(); tablaMovs();
   infoCli('c'); infoCli('k');
 }
-$('usuario').onchange=e=>{localStorage.setItem('cf-user',e.target.value); tablaMovs();};
+
 
 const ZONAS={TMG:'Tulancingo',TER:'Tulancingo',AML:'Autoeléctrica',PYM:'Poza Rica',PJV:'Poza Rica',TPS:'Poza Rica',PAL:'Poza Rica',PNA:'Poza Rica',PCA:'Poza Rica'};
 let SEL=null;
@@ -444,9 +438,8 @@ function sugerirFolio(){
 }
 async function altaCliente(){
   if(ALTA_PEND) return toast('Primero envía o copia el mensaje de bienvenida del cliente anterior',true);
-  if(!$('usuario').value) return toast('Selecciona quién registra (arriba a la derecha)',true);
   if(!confirm(`¿Confirmas que entregaste la tarjeta ${$('a-folio').value}?`)) return;
-  const d={action:'registrarCliente',prefijo:$('a-vend').value,nombre:$('a-nombre').value,telefono:$('a-tel').value,fecha:$('a-fecha').value,
+  const d={action:'registrarCliente',usuario:vendDe($('a-vend').value)?.Vendedor||'',prefijo:$('a-vend').value,nombre:$('a-nombre').value,telefono:$('a-tel').value,fecha:$('a-fecha').value,
     base:$('a-base').value,tipoCliente:$('a-tipo').value,unidades:$('a-unid').value,notas:$('a-notas').value};
   const r=await post(d,$('b-alta')); if(!r) return;
   const c=cli(r.folio);
@@ -472,9 +465,8 @@ async function regCompra(){
   if(COMPRA_PEND) return toast('Primero envía o copia el mensaje de la compra anterior',true);
   if(!$('c-fac').value.trim()) return toast('Captura el folio de factura',true);
   if(!(Number($('c-imp').value)>0)) return toast('Captura el total de la factura',true);
-  if(!$('usuario').value) return toast('Selecciona quién registra',true);
   const c=cli($('c-folio').value); if(!c) return toast('Selecciona una tarjeta registrada',true);
-  const r=await post({action:'registrarCompra',folio:c.Folio,fecha:$('c-fecha').value,factura:$('c-fac').value,importe:$('c-imp').value},$('b-compra')); if(!r) return;
+  const r=await post({action:'registrarCompra',usuario:c.Vendedor,folio:c.Folio,fecha:$('c-fecha').value,factura:$('c-fac').value,importe:$('c-imp').value},$('b-compra')); if(!r) return;
   const fac=$('c-fac').value.toUpperCase(), imp=$('c-imp').value;
   const msg=`¡Gracias por comprar en *GRUPO LLANTERAMA*! 🛞\n\nTarjeta: ${c.Folio}\nFactura: ${fac}\nImporte: ${money(imp)}\nPuntos ganados: *${num(r.puntos)}*\n\n⭐ Puntos acumulados: *${num(r.saldo)}*\n\n✅ Puedes usar tus puntos en tu próxima compra o canjearlos por artículos promocionales.`+firma(c);
   $('c-wa').innerHTML=waBox(c.Telefono,msg,r.wa,'MOV',ultimoMov(c.Folio));
@@ -486,10 +478,9 @@ function artPts(){ const a=ARTICULOS.find(x=>x.nombre===$('k-art').value); if(a&
 function usarTodo(){ const c=cli($('k-folio').value); if(c){$('k-pts').value=estadoCli(c.Folio).saldo; calcSaldo();} }
 function calcSaldo(){ const c=cli($('k-folio').value); $('k-rest').textContent=c?num(estadoCli(c.Folio).saldo-Number($('k-pts').value||0)):'—'; }
 async function regCanje(){
-  if(!$('usuario').value) return toast('Selecciona quién registra',true);
   const c=cli($('k-folio').value); if(!c) return toast('Selecciona una tarjeta registrada',true);
   const t=document.querySelector('[name=k-tipo]:checked').value;
-  const d={action:'registrarCanje',folio:c.Folio,fecha:$('k-fecha').value,tipoCanje:t,puntos:$('k-pts').value,factura:t==='Compra'?$('k-fac').value:'',articulo:t==='Compra'?'':$('k-art').value};
+  const d={action:'registrarCanje',usuario:c.Vendedor,folio:c.Folio,fecha:$('k-fecha').value,tipoCanje:t,puntos:$('k-pts').value,factura:t==='Compra'?$('k-fac').value:'',articulo:t==='Compra'?'':$('k-art').value};
   const r=await post(d,$('b-canje')); if(!r) return;
   const det=t==='Compra'?`Descuento de ${money(d.puntos)} aplicado en factura ${d.factura.toUpperCase()}`:`Artículo canjeado: ${d.articulo}`;
   const msg=`*GRUPO LLANTERAMA* · Canje de puntos 🎁\n\nTarjeta: ${c.Folio}\nPuntos utilizados: *${num(d.puntos)}*\n${det}\n\nSaldo en puntos: *${num(r.saldo)}*\n\n¡Sigue comprando y acumulando!`+firma(c);
@@ -513,11 +504,12 @@ function tablaMovs(){
   MOV_ROWS=[...DB.movimientos].reverse().filter(m=>filtroFecha(m,d,h)&&(!t||m.Tipo.startsWith(t))&&(!v||m.Folio.startsWith(v)))
     .map(m=>({...m,Cliente:cli(m.Folio)?.Nombre||''}));
   $('tb-movs').innerHTML='<tr><th>Fecha</th><th>Folio</th><th>Cliente</th><th>Tipo</th><th>Factura</th><th class="n">Importe</th><th class="n">Puntos</th><th>Uso</th><th>Artículo</th><th>Registró</th><th>WhatsApp</th><th></th></tr>'+
-  MOV_ROWS.map(m=>`<tr><td>${fdate(m.Fecha)}</td><td>${m.Folio}</td><td>${m.Cliente}</td><td>${pill(m.Tipo)}</td><td>${m['Folio Factura']||''}</td><td class="n">${m.Importe?money(m.Importe):''}</td><td class="n" style="color:${m.Puntos<0?'var(--red)':'var(--ok)'}">${num(m.Puntos)}</td><td>${m['Tipo Canje']||''}</td><td>${m['Artículo']||''}</td><td>${m['Registró']||''}</td><td>${String(m.WhatsApp||'').startsWith('ENVIADO')?'✅':'⏳'}</td><td>${m.Tipo.startsWith('ANULADO')||$('usuario').value!=='Administración'?'':`<button class="btn o sm" onclick="anular('${m.ID}')">Anular</button>`}</td></tr>`).join('');
+  MOV_ROWS.map(m=>`<tr><td>${fdate(m.Fecha)}</td><td>${m.Folio}</td><td>${m.Cliente}</td><td>${pill(m.Tipo)}</td><td>${m['Folio Factura']||''}</td><td class="n">${m.Importe?money(m.Importe):''}</td><td class="n" style="color:${m.Puntos<0?'var(--red)':'var(--ok)'}">${num(m.Puntos)}</td><td>${m['Tipo Canje']||''}</td><td>${m['Artículo']||''}</td><td>${m['Registró']||''}</td><td>${String(m.WhatsApp||'').startsWith('ENVIADO')?'✅':'⏳'}</td><td>${m.Tipo.startsWith('ANULADO')?'':`<button class="btn o sm" onclick="anular('${m.ID}')">Anular</button>`}</td></tr>`).join('');
 }
 async function anular(id){
+  const pin=prompt('🔒 Solo Administración.\nClave para anular:'); if(!pin) return;
   const motivo=prompt('Motivo de la anulación (ej. factura capturada mal):'); if(!motivo) return;
-  await post({action:'anularMovimiento',id,motivo},{disabled:false});
+  await post({action:'anularMovimiento',id,motivo,pin,usuario:'Administración'},{disabled:false});
 }
 
 /* ---------- DETALLE CLIENTE ---------- */
@@ -549,7 +541,7 @@ async function guardarCli(folio,btn){
   const ant=cli(folio), cambia=$('e-nom').value.trim()!==String(ant.Nombre)||$('e-tel').value.replace(/\D/g,'')!==String(ant.Telefono);
   const reset=$('e-reset').checked&&cambia;
   if(cambia&&!confirm('Vas a cambiar el titular o teléfono de la tarjeta '+folio+'.\n'+(reset?'⚠️ El saldo de '+num(estadoCli(folio).saldo)+' puntos se reiniciará a 0.':'El saldo y el historial de puntos se quedan en la tarjeta.')+'\n¿Continuar?')) return;
-  const r=await post({action:'actualizarCliente',folio,nombre:$('e-nom').value,telefono:$('e-tel').value,base:$('e-base').value,reiniciar:reset},btn);
+  const r=await post({action:'actualizarCliente',usuario:'Edición de ficha',folio,nombre:$('e-nom').value,telefono:$('e-tel').value,base:$('e-base').value,reiniciar:reset},btn);
   if(!r) return;
   detalle(folio);
   if(r.cambioTitular){ const c=cli(folio); $('e-wa').closest('details').open=true; $('e-wa').innerHTML='<p class="muted" style="margin-top:10px"><b>Envía la bienvenida al nuevo titular:</b></p>'+waBox(c.Telefono,msgBienvenida(c),'','CLI',c.Folio); }
