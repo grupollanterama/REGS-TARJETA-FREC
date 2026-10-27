@@ -77,6 +77,12 @@ body:has(#t-clientes.on) main{max-width:none}
 .vs{display:flex;gap:10px;align-items:flex-start;padding:8px 6px;border-radius:8px;cursor:pointer;margin:0;color:var(--txt);font-size:13px;font-weight:500}
 .vs:hover{background:#fffbea}.vs input{width:auto;margin-top:3px}.vs.off{opacity:.45}
 @media(max-width:900px){.rgrid{grid-template-columns:1fr}}
+#okmark{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:60;pointer-events:none}
+#okmark.on{display:flex}
+#okmark div{width:120px;height:120px;border-radius:50%;background:#16a34a;color:#fff;font-size:64px;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 10px 40px rgba(22,163,74,.45);animation:okpop .9s ease}
+@keyframes okpop{0%{transform:scale(.3);opacity:0}25%{transform:scale(1.1);opacity:1}70%{transform:scale(1);opacity:1}100%{transform:scale(1);opacity:0}}
+#live{font-size:11px;opacity:.85;display:flex;align-items:center;gap:6px}
+#live i{width:8px;height:8px;border-radius:50%;background:#4ade80;display:inline-block;box-shadow:0 0 0 3px rgba(74,222,128,.25)}
 @media(max-width:600px){.row{grid-template-columns:1fr}header h1{font-size:17px}}
 </style>
 </head>
@@ -85,16 +91,17 @@ body:has(#t-clientes.on) main{max-width:none}
   <div><h1>Cliente <span>Frecuente</span></h1><small>Sistema de recompensas · Grupo Llanterama</small></div>
   <div style="display:flex;gap:8px;align-items:center">
     <select id="usuario" style="width:auto;min-width:200px"></select>
+    <span id="live"><i></i><span id="live-t">En vivo</span></span>
     <button class="btn y" onclick="cargar()">↻ Actualizar</button>
   </div>
 </header>
 <nav id="nav">
   <button data-t="inicio" class="on">Resumen general</button>
   <button data-t="alta">Alta de tarjeta</button>
+  <button data-t="compra">Registrar compra</button>
   <button data-t="canje">Canjear puntos</button>
   <button data-t="clientes">Clientes</button>
   <button data-t="movs">Movimientos</button>
-  <button data-t="concil">Conciliación</button>
 </nav>
 
 <main>
@@ -139,11 +146,7 @@ body:has(#t-clientes.on) main{max-width:none}
         <div><label>Fecha de entrega</label><input type="date" id="a-fecha"></div>
       </div>
       <label>Base / Empresa / Ruta</label><input id="a-base" placeholder="Ej. Base de taxis Centro">
-      <label>Código de cliente (punto de venta) <span style="font-weight:400">· opcional, se puede agregar después</span></label><input id="a-cod" style="text-transform:uppercase">
-      <div class="row">
-        <div><label>Tipo de cliente</label><select id="a-tipo"><option>Taxi</option><option>Microbús</option><option>Colectiva</option><option>Flotilla</option><option>Particular</option><option>Otro</option></select></div>
-        <div><label>Lista de precios</label><select id="a-precio"><option>Cliente Frecuente (32% lub/acum/moto)</option><option>Especial autorizado</option></select></div>
-      </div>
+      <label>Tipo de cliente</label><select id="a-tipo"><option>Taxi</option><option>Microbús</option><option>Colectiva</option><option>Flotilla</option><option>Particular</option><option>Otro</option></select>
       <div class="row">
         <div><label>No. de unidades</label><input type="number" id="a-unid" min="0"></div>
         <div><label>Notas</label><input id="a-notas"></div>
@@ -163,18 +166,20 @@ body:has(#t-clientes.on) main{max-width:none}
 <section class="tab" id="t-compra">
   <div class="grid g2">
     <div class="card">
-      <h2>Registrar compra</h2>
-      <label>Folio de tarjeta</label><input id="c-folio" list="dl-folios" placeholder="Buscar folio o nombre" oninput="infoCli('c')">
+      <h2>Registrar compra del cliente</h2>
+      <p class="muted">Selecciona la tarjeta del cliente, captura la factura y el total. Los puntos (1%) se calculan solos.</p>
+      <label>Cliente / tarjeta</label><input id="c-folio" list="dl-folios" placeholder="Escribe folio o nombre del cliente" oninput="infoCli('c')">
       <div id="c-info"></div>
       <div class="row">
         <div><label>Fecha</label><input type="date" id="c-fecha"></div>
         <div><label>Folio de factura</label><input id="c-fac" placeholder="AF001828" style="text-transform:uppercase"></div>
       </div>
-      <label>Importe con IVA</label><input type="number" step="0.01" id="c-imp" oninput="calcPts()">
+      <label>Total de la factura (con IVA)</label><input type="number" step="0.01" id="c-imp" oninput="calcPts()">
       <div class="calc">Puntos a otorgar (1%): <b id="c-pts">0.00</b></div>
       <br><button class="btn" id="b-compra" onclick="regCompra()">Registrar compra</button>
+      <div id="compra-lock" class="cli-box" style="display:none;background:#fee2e2;color:#991b1b;font-weight:700">⚠️ Envía o copia el mensaje al cliente para poder registrar otra compra.</div>
     </div>
-    <div class="card"><h2>Notificación WhatsApp</h2><div id="c-wa" class="muted">Se mostrará al registrar la compra.</div></div>
+    <div class="card"><h2>Mensaje para el cliente</h2><p class="muted"><b>Obligatorio:</b> al registrar la compra, envía al cliente el mensaje con sus puntos acumulados.</p><div id="c-wa"></div></div>
   </div>
 </section>
 
@@ -209,7 +214,7 @@ body:has(#t-clientes.on) main{max-width:none}
     <div class="filters">
       <div><label>Buscar</label><input id="f-cli" placeholder="Nombre, folio, teléfono, base" oninput="tablaClientes()"></div>
       <div><label>Vendedor</label><select id="f-cli-v" onchange="tablaClientes()"></select></div>
-      <div><label>Estado</label><select id="f-cli-e" onchange="tablaClientes()"><option value="">Todos</option><option value="sin">Sin compras</option><option value="act">Con compras</option><option value="saldo">Con saldo</option><option value="nocod">Sin código de cliente</option></select></div>
+      <div><label>Estado</label><select id="f-cli-e" onchange="tablaClientes()"><option value="">Todos</option><option value="sin">Sin compras</option><option value="act">Con compras</option><option value="saldo">Con saldo</option></select></div>
       <button class="btn o" onclick="exportar('clientes')">⬇ CSV</button>
     </div>
     <div class="tw"><table id="tb-cli"></table></div>
@@ -243,26 +248,12 @@ body:has(#t-clientes.on) main{max-width:none}
   </div>
 </section>
 
-<!-- CONCILIACIÓN -->
-<section class="tab" id="t-concil">
-  <div class="card">
-    <h2>Conciliación contra punto de venta (BDTUL · BDAUT · BDPZ)</h2>
-    <p class="muted" style="margin-bottom:12px">Pega el reporte de ventas en la hoja correspondiente del Sheet y presiona Conciliar. Cruza por folio de factura y código de cliente.</p>
-    <div class="filters">
-      <button class="btn" id="b-concil" onclick="conciliar()">⚖ Conciliar</button>
-      <div><label>Estado</label><select id="f-co-e" onchange="tablaConcil()"><option value="">Todos</option><option value="OK">✅ Cuadra</option><option value="DIFERENCIA">⚠️ Diferencia</option><option value="NO_ENCONTRADA">❌ No existe en PV</option><option value="NO_REGISTRADA">🔍 No registrada</option><option value="ANTES_ALTA">🕓 Antes de la tarjeta</option><option value="SIN_VENTAS">∅ Sin ventas en BD</option></select></div>
-      <div><label>Vendedor</label><select id="f-co-v" onchange="tablaConcil()"></select></div>
-      <button class="btn o" onclick="exportar('concil')">⬇ CSV</button>
-    </div>
-    <div class="kpis" id="co-kpis"></div>
-    <div class="tw"><table id="tb-concil"><tr><td class="muted">Presiona Conciliar.</td></tr></table></div>
-  </div>
-</section>
 </main>
 
 <datalist id="dl-folios"></datalist>
 <div class="modal" id="modal" onclick="if(event.target===this)this.classList.remove('on')"><div class="card" id="modal-c"></div></div>
 <div class="toast" id="toast"></div>
+<div id="okmark"><div>✓</div></div>
 
 <script>
 /* ====== CONFIGURA AQUÍ LA URL DE TU APPS SCRIPT ====== */
@@ -279,7 +270,6 @@ const ARTICULOS = [
 
 /* Links que se incluyen en los mensajes */
 const PROMO_URL = 'https://grupollanterama.github.io/promos/';      // página de promociones del mes (la del QR)
-const CONSULTA_URL = 'https://grupollanterama.github.io/puntos/';   // página donde el cliente consulta sus puntos
 
 /* Descuentos especiales de la tarjeta Cliente Frecuente */
 const DESCUENTOS = 'Lubricantes 32% · Acumuladores 32% · Motobaterías 32% · Llantas: precio especial a consultar';
@@ -297,28 +287,34 @@ $('nav').onclick = e => {
   const t = e.target.dataset.t; if(!t) return;
   document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
   document.querySelectorAll('.tab').forEach(s=>s.classList.toggle('on',s.id==='t-'+t));
-  if(t==='concil') conciliar();
 };
 
 function toast(m, err){ const t=$('toast'); t.textContent=m; t.className='toast'+(err?' err':''); t.style.display='block'; clearTimeout(t._t); t._t=setTimeout(()=>t.style.display='none',4000); }
 
 /* ---------- API ---------- */
-async function cargar(){
+let OCUPADO=false;
+async function cargar(silencioso){
+  if(silencioso && (OCUPADO||document.hidden)) return;
   try{
     const r = await fetch(API_URL+'?action=init').then(r=>r.json());
     if(!r.ok) throw new Error(r.error);
+    if(silencioso && OCUPADO) return;
     DB = r; render();
-  }catch(e){ toast('No se pudo cargar: '+e.message, true); }
+    $('live-t').textContent='Actualizado '+new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  }catch(e){ if(!silencioso) toast('No se pudo cargar: '+e.message, true); }
 }
+function okMark(){ const o=$('okmark'); o.classList.remove('on'); void o.offsetWidth; o.classList.add('on'); clearTimeout(o._t); o._t=setTimeout(()=>o.classList.remove('on'),900); }
+setInterval(()=>cargar(true),20000);
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) cargar(true); });
 async function post(data, btn){
-  btn.disabled = true;
+  btn.disabled = true; OCUPADO=true;
   try{
     data.usuario = $('usuario').value;
     const r = await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(data)}).then(r=>r.json());
     if(!r.ok) throw new Error(r.error);
-    DB = r; render(); toast(r.mensaje); return r;
+    DB = r; render(); okMark(); toast('✅ Guardado · '+r.mensaje); return r;
   }catch(e){ toast(e.message, true); return null; }
-  finally{ btn.disabled = false; }
+  finally{ btn.disabled = false; OCUPADO=false; }
 }
 
 /* ---------- CÁLCULOS ---------- */
@@ -358,15 +354,16 @@ async function copiarMsg(k,ref,id,btn){
 function waHecho(ref,id){
   marcarEnviado(ref,id);
   if(ref==='CLI'){ ALTA_PEND=false; $('b-alta').disabled=false; $('alta-lock').style.display='none'; }
+  if(ref==='MOV'&&COMPRA_PEND){ COMPRA_PEND=false; $('b-compra').disabled=false; $('compra-lock').style.display='none'; }
 }
-let ALTA_PEND=false;
+let ALTA_PEND=false, COMPRA_PEND=false;
 const ultimoMov = folio => [...DB.movimientos].reverse().find(m=>m.Folio===folio)?.ID;
 function msgBienvenida(c){
-  return `¡Hola ${c.Nombre}! 👋\nBienvenido al sistema de recompensas de *Grupo Llanterama*.\n\nTu tarjeta Cliente Frecuente es la *${c.Folio}*.\nCompra, acumula puntos y canjéalos por artículos promocionales o paga tus próximas compras.\n\nPor cada compra acumulas el 1% en puntos. Solo pide en el punto de venta que registren tu compra.\n\nAdemás, con tu tarjeta tienes descuentos especiales:\n${DESCUENTOS.split(' · ').map(x=>'• '+x).join('\n')}\n\n📲 *Promociones del mes:* escanea el código QR de tu tarjeta o entra aquí:\n${PROMO_URL}\n\n⭐ *Consulta tus puntos cuando quieras:*\n${CONSULTA_URL}?f=${c.Folio}\n(te pedirá los últimos 4 dígitos de tu teléfono)`+firma(c);
+  return `¡Hola ${c.Nombre}! 👋\nBienvenido al sistema de recompensas de *Grupo Llanterama*.\n\nTu tarjeta Cliente Frecuente es la *${c.Folio}*.\nCompra, acumula puntos y canjéalos por artículos promocionales o paga tus próximas compras.\n\nPor cada compra acumulas el 1% en puntos. Por ejemplo $1,000.00 equivalen a 10 puntos que son $10.00.\n\n📲 *Promociones del mes:* escanea el código QR de tu tarjeta o entra aquí:\n${PROMO_URL}`+firma(c);
 }
 function msgMovimiento(m,c){
   const s=estadoCli(c.Folio).saldo;
-  if(m.Tipo==='COMPRA') return `¡Gracias por comprar en *GRUPO LLANTERAMA*! 🛞\n\nTarjeta: ${c.Folio}\nFactura: ${m['Folio Factura']}\nImporte: ${money(m.Importe)}\nPuntos ganados: *${num(m.Puntos)}*\n\nPuntos acumulados: *${num(s)}*\n\nConsulta tu saldo: ${CONSULTA_URL}?f=${c.Folio}`+firma(c);
+  if(m.Tipo==='COMPRA') return `¡Gracias por comprar en *GRUPO LLANTERAMA*! 🛞\n\nTarjeta: ${c.Folio}\nFactura: ${m['Folio Factura']}\nImporte: ${money(m.Importe)}\nPuntos ganados: *${num(m.Puntos)}*\n\nPuntos acumulados: *${num(s)}*`+firma(c);
   return `*GRUPO LLANTERAMA* · Canje de puntos 🎁\n\nTarjeta: ${c.Folio}\nPuntos utilizados: *${num(-m.Puntos)}*\n${m['Tipo Canje']==='Compra'?'Descuento aplicado en factura '+m['Folio Factura']:'Artículo canjeado: '+m['Artículo']}\n\nSaldo en puntos: *${num(s)}*`+firma(c);
 }
 function firma(c){ const v=vendDe(c.Prefijo); return v?`\n\nTu asesor: ${v.Asesor}\nCel. ${v.Celular}`:''; }
@@ -387,7 +384,7 @@ function render(){
   resumen(); tablaClientes(); tablaMovs();
   infoCli('c'); infoCli('k');
 }
-$('usuario').onchange=e=>{localStorage.setItem('cf-user',e.target.value); tablaMovs(); if(CONCIL.length) tablaConcil();};
+$('usuario').onchange=e=>{localStorage.setItem('cf-user',e.target.value); tablaMovs();};
 
 const ZONAS={TMG:'Tulancingo',TER:'Tulancingo',AML:'Autoeléctrica',PYM:'Poza Rica',PJV:'Poza Rica',TPS:'Poza Rica',PAL:'Poza Rica',PNA:'Poza Rica',PCA:'Poza Rica'};
 let SEL=null;
@@ -450,13 +447,13 @@ async function altaCliente(){
   if(!$('usuario').value) return toast('Selecciona quién registra (arriba a la derecha)',true);
   if(!confirm(`¿Confirmas que entregaste la tarjeta ${$('a-folio').value}?`)) return;
   const d={action:'registrarCliente',prefijo:$('a-vend').value,nombre:$('a-nombre').value,telefono:$('a-tel').value,fecha:$('a-fecha').value,
-    base:$('a-base').value,codigo:$('a-cod').value,tipoCliente:$('a-tipo').value,tipoPrecio:$('a-precio').value,unidades:$('a-unid').value,notas:$('a-notas').value};
+    base:$('a-base').value,tipoCliente:$('a-tipo').value,unidades:$('a-unid').value,notas:$('a-notas').value};
   const r=await post(d,$('b-alta')); if(!r) return;
   const c=cli(r.folio);
   const msg=msgBienvenida(c);
   $('a-wa').innerHTML=waBox(c.Telefono,msg,r.wa,'CLI',c.Folio);
   if(!String(r.wa||'').startsWith('ENVIADO')){ ALTA_PEND=true; $('b-alta').disabled=true; $('alta-lock').style.display='block'; $('a-wa').scrollIntoView({behavior:'smooth'}); }
-  ['a-nombre','a-tel','a-base','a-cod','a-unid','a-notas'].forEach(i=>$(i).value='');
+  ['a-nombre','a-tel','a-base','a-unid','a-notas'].forEach(i=>$(i).value='');
 }
 
 /* ---------- COMPRA / CANJE ---------- */
@@ -465,18 +462,23 @@ function infoCli(p){
   if(!c){ box.innerHTML=$(p+'-folio').value?'<div class="cli-box muted">Tarjeta no registrada</div>':''; if(p==='k')calcSaldo(); return; }
   const e=estadoCli(c.Folio);
   const puede = e.compras>=DB.config.comprasMinCanje;
-  box.innerHTML=`<div class="cli-box"><b>${c.Nombre}</b> · ${c.Telefono}<br>${c['Base / Empresa']||''} ${c['Tipo Cliente']?'· '+c['Tipo Cliente']:''} · ${c['Tipo Precio']||''}<br>
+  box.innerHTML=`<div class="cli-box"><b>${c.Nombre}</b> · ${c.Telefono}<br>${c['Base / Empresa']||''} ${c['Tipo Cliente']?'· '+c['Tipo Cliente']:''}<br>
   Vendedor: ${c.Vendedor}<br><span class="muted">${DESCUENTOS}</span><br>Compras: <b>${e.compras}</b> · Facturado: <b>${money(e.facturado)}</b><br>Saldo: <b style="font-size:16px">${num(e.saldo)} pts</b>
   ${p==='k'&&!puede?`<br><span style="color:var(--red);font-weight:600">⚠ Aún no tiene compras registradas con puntos</span>`:''}</div>`;
   if(p==='k') calcSaldo();
 }
 function calcPts(){ $('c-pts').textContent=num(r2(Number($('c-imp').value||0)*DB.config.porcentaje)); }
 async function regCompra(){
+  if(COMPRA_PEND) return toast('Primero envía o copia el mensaje de la compra anterior',true);
+  if(!$('c-fac').value.trim()) return toast('Captura el folio de factura',true);
+  if(!(Number($('c-imp').value)>0)) return toast('Captura el total de la factura',true);
   if(!$('usuario').value) return toast('Selecciona quién registra',true);
   const c=cli($('c-folio').value); if(!c) return toast('Selecciona una tarjeta registrada',true);
   const r=await post({action:'registrarCompra',folio:c.Folio,fecha:$('c-fecha').value,factura:$('c-fac').value,importe:$('c-imp').value},$('b-compra')); if(!r) return;
-  const msg=`¡Gracias por comprar en *GRUPO LLANTERAMA*! 🛞\n\nTarjeta: ${c.Folio}\nFactura: ${$('c-fac').value.toUpperCase()}\nImporte: ${money($('c-imp').value)}\nPuntos ganados: *${num(r.puntos)}*\n\nPuntos acumulados: *${num(r.saldo)}*`+(estadoCli(c.Folio).compras>=DB.config.comprasMinCanje?'\n\n✅ Ya puedes usar tus puntos en tu próxima compra o canjearlos por artículos promocionales.':'')+firma(c);
+  const fac=$('c-fac').value.toUpperCase(), imp=$('c-imp').value;
+  const msg=`¡Gracias por comprar en *GRUPO LLANTERAMA*! 🛞\n\nTarjeta: ${c.Folio}\nFactura: ${fac}\nImporte: ${money(imp)}\nPuntos ganados: *${num(r.puntos)}*\n\n⭐ Puntos acumulados: *${num(r.saldo)}*\n\n✅ Puedes usar tus puntos en tu próxima compra o canjearlos por artículos promocionales.`+firma(c);
   $('c-wa').innerHTML=waBox(c.Telefono,msg,r.wa,'MOV',ultimoMov(c.Folio));
+  if(!String(r.wa||'').startsWith('ENVIADO')){ COMPRA_PEND=true; $('b-compra').disabled=true; $('compra-lock').style.display='block'; }
   $('c-fac').value=''; $('c-imp').value=''; calcPts();
 }
 function tipoCanje(){ const t=document.querySelector('[name=k-tipo]:checked').value; $('k-fac-w').style.display=t==='Compra'?'':'none'; $('k-art-w').style.display=t==='Compra'?'none':''; if(t!=='Compra') artPts(); }
@@ -501,9 +503,9 @@ function tablaClientes(){
   const q=$('f-cli').value.toLowerCase(), v=$('f-cli-v').value, e=$('f-cli-e').value;
   CLI_ROWS=DB.clientes.map(c=>({...c,...estadoCli(c.Folio)})).filter(c=>
     (!v||c.Prefijo===v) && (!q||[c.Folio,c.Nombre,c.Telefono,c['Base / Empresa']].join(' ').toLowerCase().includes(q)) &&
-    (!e||(e==='sin'&&!c.compras)||(e==='act'&&c.compras)||(e==='saldo'&&c.saldo>0)||(e==='nocod'&&!c['Código Cliente'])));
-  $('tb-cli').innerHTML='<tr><th>Folio</th><th>Código</th><th>Cliente</th><th>Teléfono</th><th>Base</th><th>Tipo</th><th>Precio</th><th>Vendedor</th><th>Alta</th><th class="n">Compras</th><th class="n">Facturado</th><th class="n">Ganados</th><th class="n">Usados</th><th class="n">Saldo</th><th>Última compra</th></tr>'+
-  CLI_ROWS.map(c=>`<tr class="click" onclick="detalle('${c.Folio}')"><td><b>${c.Folio}</b></td><td>${c['Código Cliente']||'<span class="pill p-x">Pendiente</span>'}</td><td>${c.Nombre}</td><td>${c.Telefono}</td><td>${c['Base / Empresa']||''}</td><td>${c['Tipo Cliente']||''}</td><td>${c['Tipo Precio']||''}</td><td>${c.Prefijo}</td><td>${fdate(c['Fecha Alta'])}</td><td class="n">${c.compras}</td><td class="n">${money(c.facturado)}</td><td class="n">${num(c.ganados)}</td><td class="n">${num(c.usados)}</td><td class="n"><b>${num(c.saldo)}</b></td><td>${fdate(c.ultima)}</td></tr>`).join('');
+    (!e||(e==='sin'&&!c.compras)||(e==='act'&&c.compras)||(e==='saldo'&&c.saldo>0)));
+  $('tb-cli').innerHTML='<tr><th>Folio</th><th>Cliente</th><th>Teléfono</th><th>Base</th><th>Tipo</th><th>Vendedor</th><th>Alta</th><th class="n">Compras</th><th class="n">Facturado</th><th class="n">Ganados</th><th class="n">Usados</th><th class="n">Saldo</th><th>Última compra</th></tr>'+
+  CLI_ROWS.map(c=>`<tr class="click" onclick="detalle('${c.Folio}')"><td><b>${c.Folio}</b></td><td>${c.Nombre}</td><td>${c.Telefono}</td><td>${c['Base / Empresa']||''}</td><td>${c['Tipo Cliente']||''}</td><td>${c.Prefijo}</td><td>${fdate(c['Fecha Alta'])}</td><td class="n">${c.compras}</td><td class="n">${money(c.facturado)}</td><td class="n">${num(c.ganados)}</td><td class="n">${num(c.usados)}</td><td class="n"><b>${num(c.saldo)}</b></td><td>${fdate(c.ultima)}</td></tr>`).join('');
 }
 function filtroFecha(m,d,h){ return (!d||m.Fecha>=d)&&(!h||m.Fecha<=h); }
 function tablaMovs(){
@@ -524,16 +526,13 @@ function detalle(folio){
   const ms=DB.movimientos.filter(m=>m.Folio===folio).sort((a,b)=>a.Fecha.localeCompare(b.Fecha));
   let s=0;
   $('modal-c').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:start"><h2>${c.Folio} · ${c.Nombre}</h2><button class="btn o sm" onclick="$('modal').classList.remove('on')">✕</button></div>
-  <div class="cli-box">📱 ${c.Telefono} · ${c['Base / Empresa']||'—'} · ${c['Tipo Cliente']||''} · ${c['Tipo Precio']||''} · ${c.Unidades||'?'} unidades<br>Alta: ${fdate(c['Fecha Alta'])} · Vendedor: ${c.Vendedor} · Asesor: ${v?.Asesor||''}</div>
+  <div class="cli-box">📱 ${c.Telefono} · ${c['Base / Empresa']||'—'} · ${c['Tipo Cliente']||''} · ${c.Unidades||'?'} unidades<br>Alta: ${fdate(c['Fecha Alta'])} · Vendedor: ${c.Vendedor} · Asesor: ${v?.Asesor||''}</div>
   <details style="margin-top:10px"><summary style="cursor:pointer;font-weight:700;color:var(--navy)">✏️ Editar datos / reasignar tarjeta</summary>
   <div class="row" style="margin-top:6px">
     <div><label>Nombre del titular</label><input id="e-nom" value="${String(c.Nombre).replace(/"/g,'&quot;')}"></div>
     <div><label>Teléfono</label><input id="e-tel" value="${c.Telefono}" maxlength="10" inputmode="numeric"></div>
   </div>
-  <div class="row">
-    <div><label>Base / Empresa</label><input id="e-base" value="${String(c['Base / Empresa']||'').replace(/"/g,'&quot;')}"></div>
-    <div><label>Código de cliente (punto de venta)</label><input id="e-cod" value="${c['Código Cliente']||''}" style="text-transform:uppercase"></div>
-  </div>
+  <label>Base / Empresa</label><input id="e-base" value="${String(c['Base / Empresa']||'').replace(/"/g,'&quot;')}">
   <label class="vs" style="margin-top:8px;padding:8px;border:1px solid var(--line)"><input type="checkbox" id="e-reset"><div><b>Reiniciar puntos a 0 para el nuevo titular</b><div class="muted">Solo aplica si cambias nombre o teléfono. El saldo actual (${num(e.saldo)} pts) se da de baja y queda registrado como REINICIO en Movimientos.</div></div></label>
   <div class="muted" style="margin-top:6px">Si cambias nombre o teléfono, se guarda el titular anterior en Notas. Sin la casilla, el folio, historial y saldo se conservan en la tarjeta.</div>
   <button class="btn sm" style="margin-top:8px" onclick="guardarCli('${folio}',this)">Guardar cambios</button>
@@ -550,7 +549,7 @@ async function guardarCli(folio,btn){
   const ant=cli(folio), cambia=$('e-nom').value.trim()!==String(ant.Nombre)||$('e-tel').value.replace(/\D/g,'')!==String(ant.Telefono);
   const reset=$('e-reset').checked&&cambia;
   if(cambia&&!confirm('Vas a cambiar el titular o teléfono de la tarjeta '+folio+'.\n'+(reset?'⚠️ El saldo de '+num(estadoCli(folio).saldo)+' puntos se reiniciará a 0.':'El saldo y el historial de puntos se quedan en la tarjeta.')+'\n¿Continuar?')) return;
-  const r=await post({action:'actualizarCliente',folio,nombre:$('e-nom').value,codigo:$('e-cod').value,telefono:$('e-tel').value,base:$('e-base').value,reiniciar:reset},btn);
+  const r=await post({action:'actualizarCliente',folio,nombre:$('e-nom').value,telefono:$('e-tel').value,base:$('e-base').value,reiniciar:reset},btn);
   if(!r) return;
   detalle(folio);
   if(r.cambioTitular){ const c=cli(folio); $('e-wa').closest('details').open=true; $('e-wa').innerHTML='<p class="muted" style="margin-top:10px"><b>Envía la bienvenida al nuevo titular:</b></p>'+waBox(c.Telefono,msgBienvenida(c),'','CLI',c.Folio); }
@@ -577,58 +576,16 @@ async function enviarPend(i,btn){
   await post({action:'marcarWA',tipo:x.ref,id:x.id},btn);
 }
 
-/* ---------- CONCILIACIÓN ---------- */
-let CONCIL=[], CO_ROWS=[], CO_INFO={};
-const CO_EST={OK:['✅ Cuadra','p-c'],DIFERENCIA:['⚠️ Diferencia','p-a'],NO_ENCONTRADA:['❌ No existe en PV','p-x'],NO_REGISTRADA:['🔍 No registrada','p-x'],ANTES_ALTA:['🕓 Antes de la tarjeta','p-a'],SIN_VENTAS:['∅ Sin ventas en BD','p-a']};
-async function conciliar(){
-  const b=$('b-concil'); b.disabled=true; b.textContent='Conciliando…';
-  try{
-    const r=await fetch(API_URL+'?action=conciliar').then(r=>r.json());
-    if(!r.ok) throw new Error(r.error);
-    CONCIL=r.conciliacion; CO_INFO=r;
-    if(r.clientes){ DB={vendedores:r.vendedores,clientes:r.clientes,movimientos:r.movimientos,config:r.config}; render(); }
-    tablaConcil();
-    toast((r.auto?.registradas?'✔ '+r.auto.mensaje+' · ':'')+'Facturas leídas: '+Object.entries(r.facturasBD).map(([k,v])=>k+' '+v).join(', '));
-  }catch(e){ toast(e.message,true); }
-  finally{ b.disabled=false; b.textContent='⚖ Conciliar'; }
-}
-function tablaConcil(){
-  const fv=$('f-co-v'); if(fv.options.length<2) fv.innerHTML='<option value="">Todos</option>'+DB.vendedores.map(v=>`<option value="${v.Prefijo}">${v.Prefijo} · ${v.Vendedor}</option>`).join('');
-  const e=$('f-co-e').value, v=fv.value;
-  CO_ROWS=CONCIL.filter(x=>(!e||x.estado===e)&&(!v||x.folio.startsWith(v)));
-  const cnt=k=>CONCIL.filter(x=>x.estado===k).length;
-  const pend=r2(CONCIL.filter(x=>x.estado==='NO_REGISTRADA').reduce((a,x)=>a+x.puntosSugeridos,0));
-  $('co-kpis').innerHTML=[[cnt('OK'),'✅ Cuadran'],[cnt('DIFERENCIA'),'⚠️ Con diferencia'],[cnt('NO_ENCONTRADA'),'❌ No existen en PV'],[cnt('NO_REGISTRADA'),'🔍 Compras sin registrar'],[num(pend),'Puntos que se le deben a clientes']].map(([b,s])=>`<div class="kpi"><b>${b}</b><span>${s}</span></div>`).join('');
-  $('tb-concil').innerHTML='<tr><th>Estado</th><th>Folio</th><th>Cliente</th><th>Código</th><th>BD</th><th>Factura</th><th>Fecha reg.</th><th>Fecha PV</th><th class="n">Importe reg.</th><th class="n">Importe PV (c/IVA)</th><th>Detalle</th><th></th></tr>'+
-  CO_ROWS.map((x,i)=>`<tr><td><span class="pill ${CO_EST[x.estado][1]}">${CO_EST[x.estado][0]}</span></td><td><b>${x.folio}</b></td><td>${x.cliente}</td><td>${x.codigo||''}</td><td>${x.bd}</td><td>${x.factura}</td><td>${fdate(x.fechaReg)}</td><td>${fdate(x.fechaPV)}</td><td class="n">${x.importeReg!=null?money(x.importeReg):''}</td><td class="n">${x.importePV!=null?money(x.importePV):''}</td><td style="white-space:normal;min-width:220px">${x.detalle}</td><td>${
-    (x.estado==='NO_ENCONTRADA'||x.estado==='DIFERENCIA')&&$('usuario').value==='Administración'?`<button class="btn o sm" onclick="anular('${x.id}')">Anular</button>`:''}</td></tr>`).join('');
-}
-async function registrarTodas(){
-  if(!$('usuario').value) return toast('Selecciona quién registra',true);
-  const n=CONCIL.filter(x=>x.estado==='NO_REGISTRADA').length;
-  if(!n) return toast('Primero presiona Conciliar; no hay compras pendientes',true);
-  if(!confirm(`Se registrarán ${n} compras con su 1% de puntos. ¿Continuar?`)) return;
-  const r=await post({action:'registrarTodas'},$('b-todas'));
-  if(r){ if(r.errores?.length) alert('Con error:\n'+r.errores.join('\n')); conciliar(); }
-}
-function coRegistrar(i){
-  const x=CO_ROWS[i], c=cli(x.folio);
-  $('c-folio').value=x.folio+' · '+(c?.Nombre||''); $('c-fecha').value=x.fechaPV||hoy(); $('c-fac').value=x.factura; $('c-imp').value=x.importePV;
-  calcPts(); infoCli('c');
-  document.querySelector('nav button[data-t=compra]').click();
-  toast('Revisa los datos y presiona Registrar compra');
-}
-
 /* ---------- EXPORTAR ---------- */
 function exportar(t){
-  const rows = t==='clientes'?CLI_ROWS:t==='movs'?MOV_ROWS:t==='concil'?CO_ROWS:REP_ROWS; if(!rows.length) return toast('Sin datos',true);
+  const rows = t==='clientes'?CLI_ROWS:t==='movs'?MOV_ROWS:REP_ROWS; if(!rows.length) return toast('Sin datos',true);
   const keys=Object.keys(rows[0]);
   const csv='\ufeff'+[keys.join(','),...rows.map(r=>keys.map(k=>`"${String(r[k]??'').replace(/"/g,'""')}"`).join(','))].join('\n');
   const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download=`cliente-frecuente-${t}-${hoy()}.csv`; a.click();
 }
 
 /* ---------- INIT ---------- */
-window.addEventListener('beforeunload',e=>{ if(ALTA_PEND){ e.preventDefault(); e.returnValue=''; } });
+window.addEventListener('beforeunload',e=>{ if(ALTA_PEND||COMPRA_PEND){ e.preventDefault(); e.returnValue=''; } });
 ['a-fecha','c-fecha','k-fecha'].forEach(i=>$(i).value=hoy());
 $('k-art').innerHTML=ARTICULOS.map(a=>`<option value="${a.nombre}">${a.nombre}${a.puntos?' · '+a.puntos+' pts':''}</option>`).join('');
 $('k-folio').addEventListener('change',()=>infoCli('k'));
