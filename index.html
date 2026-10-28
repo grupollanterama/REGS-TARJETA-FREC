@@ -75,6 +75,27 @@ tr.click{cursor:pointer}tr.click:hover td{background:#fffbea}
 .pitem:active,.pitem:hover{background:#fffbea;border-color:var(--yellow)}
 .pitem .pt{text-align:right;flex-shrink:0}.pitem .pt b{display:block;color:var(--navy);font-size:16px}
 #pk-list{margin-top:8px}
+/* buscador */
+.buscador{display:flex;gap:8px}.buscador input{font-size:17px;font-weight:700;letter-spacing:.5px}
+.buscador .btn{flex-shrink:0;white-space:nowrap}
+.sug{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 12px;border:1px solid var(--line);border-radius:10px;margin-top:6px;cursor:pointer;background:#fff}
+.sug:hover,.sug:active{background:#fffbea;border-color:var(--yellow)}
+.sug .pt{text-align:right;flex-shrink:0;font-weight:800;color:var(--navy)}
+.nores{padding:12px;margin-top:6px;border-radius:10px;background:#fff8dd;font-size:13px;font-weight:600}
+.selcli{border:2px solid var(--navy);border-radius:12px;padding:14px;margin-top:10px;background:#eef1fb}
+.selcli .nm{font-size:17px;font-weight:800;color:var(--navy)}
+.selcli .sal{font-size:24px;font-weight:800;color:var(--navy)}
+.hist{margin-top:10px;border-top:1px solid #d6dcec;padding-top:8px}
+.hist div{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;padding:3px 0}
+/* conexión */
+#netbar{position:fixed;left:0;right:0;top:0;z-index:80;display:none;padding:10px 14px;text-align:center;font-weight:700;color:#fff;background:var(--red)}
+#netbar.ok{background:var(--ok)}
+#saving{position:fixed;inset:0;z-index:75;background:rgba(15,20,40,.55);display:none;align-items:center;justify-content:center;padding:20px}
+#saving.on{display:flex}
+#saving div{background:#fff;border-radius:16px;padding:26px 24px;text-align:center;max-width:320px;font-weight:700;color:var(--navy)}
+#saving i{display:block;width:44px;height:44px;margin:0 auto 14px;border:5px solid #e3e7f0;border-top-color:var(--navy);border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#saving small{display:block;margin-top:8px;color:var(--mut);font-weight:500}
 /* confirmación */
 .crow{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--line);font-size:14px}
 .crow span{color:var(--mut)}.crow b{text-align:right}
@@ -181,6 +202,7 @@ body:has(#t-clientes.on) main{max-width:none}
   <button data-t="admin"><b>🔒</b><span>Admin</span></button>
 </nav>
 
+<div id="carga" style="text-align:center;padding:40px 20px;color:var(--mut);font-weight:600">⏳ Cargando datos…</div>
 <main>
 <!-- RESUMEN GENERAL -->
 <section class="tab on" id="t-inicio">
@@ -243,8 +265,9 @@ body:has(#t-clientes.on) main{max-width:none}
   <div class="grid g2">
     <div class="card">
       <h2>Registrar compra del cliente</h2>
-      <label>1. Cliente</label>
-      <div class="selbox" id="c-sel" onclick="abrirPicker('c')"><span>👆 TOCA AQUÍ PARA ELEGIR AL CLIENTE</span><span class="ar">▾</span></div>
+      <label>1. Folio de la tarjeta o nombre del cliente</label>
+      <div class="buscador"><input id="c-q" type="text" placeholder="EJ. TMG-002 O NOMBRE" autocomplete="off" autocapitalize="characters" oninput="buscarCli('c')"><button class="btn o" onclick="abrirPicker('c')">☰ Lista</button></div>
+      <div id="c-res"></div>
       <input type="hidden" id="c-folio">
       <div id="c-info"></div>
       <div class="row">
@@ -265,8 +288,9 @@ body:has(#t-clientes.on) main{max-width:none}
   <div class="grid g2">
     <div class="card">
       <h2>Canjear puntos</h2>
-      <label>1. Cliente</label>
-      <div class="selbox" id="k-sel" onclick="abrirPicker('k')"><span>👆 TOCA AQUÍ PARA ELEGIR AL CLIENTE</span><span class="ar">▾</span></div>
+      <label>1. Folio de la tarjeta o nombre del cliente</label>
+      <div class="buscador"><input id="k-q" type="text" placeholder="EJ. TMG-002 O NOMBRE" autocomplete="off" autocapitalize="characters" oninput="buscarCli('k')"><button class="btn o" onclick="abrirPicker('k')">☰ Lista</button></div>
+      <div id="k-res"></div>
       <input type="hidden" id="k-folio">
       <div id="k-info"></div>
       <label>2. Fecha</label><input type="date" id="k-fecha">
@@ -355,6 +379,8 @@ body:has(#t-clientes.on) main{max-width:none}
 <div class="modal" id="modal" onclick="if(event.target===this)cerrarModal()"><div class="card" id="modal-c"></div></div>
 <div class="modal" id="conf"><div class="card" id="conf-c"></div></div>
 <div class="toast" id="toast"></div>
+<div id="netbar"></div>
+<div id="saving"><div><i></i><span id="saving-t">Guardando…</span><small>No cierres esta pantalla</small></div></div>
 <div id="okmark"><div>✓</div></div>
 
 <script>
@@ -400,29 +426,72 @@ function okMark(){ const o=$('okmark'); o.classList.remove('on'); void o.offsetW
 const verA = id => setTimeout(()=>$(id).scrollIntoView({behavior:'smooth',block:'start'}),650);
 function cerrarModal(){ $('modal').classList.remove('on'); }
 
-/* ---------- API ---------- */
-let OCUPADO=false;
+/* ---------- API (con tiempo límite, reintento seguro y aviso de conexión) ---------- */
+let OCUPADO=false, CARGADO=false, VER=null, FALLOS=0;
+const nuevoId = () => Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+async function llamar(url, opts={}, ms=30000){
+  const ctl=new AbortController(), t=setTimeout(()=>ctl.abort(),ms);
+  try{
+    const res=await fetch(url,{...opts,signal:ctl.signal});
+    const r=await res.json();
+    return r;
+  }catch(e){ const err=new Error(e.name==='AbortError'?'El servidor tardó demasiado en responder.':'No hay conexión con el servidor.'); err.red=true; throw err; }
+  finally{ clearTimeout(t); }
+}
 async function api(data){
-  const r = await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(data)}).then(r=>r.json());
-  if(!r.ok) throw new Error(r.error); return r;
+  if(!navigator.onLine){ const e=new Error('Tu celular no tiene internet en este momento.'); e.red=true; throw e; }
+  const r=await llamar(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(data)});
+  if(!r.ok){ const e=new Error(r.error); e.ocupado=!!r.ocupado; throw e; }
+  netOk(); if(r.ver) VER=r.ver; return r;
 }
 async function cargar(silencioso){
   if(silencioso && (OCUPADO||document.hidden)) return;
   try{
-    const r = await fetch(API_URL+'?action=init').then(r=>r.json());
+    const r=await llamar(API_URL+'?action=init',{},40000);
     if(!r.ok) throw new Error(r.error);
     if(silencioso && OCUPADO) return;
-    DB = r; render();
-    $('live-t').textContent='Actualizado '+new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-  }catch(e){ if(!silencioso) toast('No se pudo cargar: '+e.message, true); }
+    DB=r; VER=r.ver||VER; CARGADO=true; render(); netOk(); $('carga').style.display='none';
+    $('live-t').textContent='Actualizado '+new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
+  }catch(e){ netFallo(); if(!silencioso) toast('No se pudieron cargar los datos: '+e.message,true); }
 }
-setInterval(()=>cargar(true),20000);
-document.addEventListener('visibilitychange',()=>{ if(!document.hidden) cargar(true); });
+/* Revisa cada 15 s si alguien registró algo; solo descarga todo si hubo cambios */
+async function revisar(){
+  if(OCUPADO||document.hidden) return;
+  try{
+    const r=await llamar(API_URL+'?action=ver',{},15000);
+    netOk();
+    if(r.ok && r.ver!==VER) cargar(true);
+  }catch(e){ netFallo(); }
+}
+setInterval(revisar,15000);
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) revisar(); });
+function netFallo(){ FALLOS++; if(FALLOS>=2||!navigator.onLine) netBar(false); }
+function netOk(){ if(FALLOS>=2||$('netbar').style.display==='block'&&!$('netbar').classList.contains('ok')) netBar(true); FALLOS=0; }
+function netBar(ok){
+  const b=$('netbar'); clearTimeout(b._t);
+  if(ok){ b.className='ok'; b.textContent='✅ Conexión restablecida'; b.style.display='block'; b._t=setTimeout(()=>b.style.display='none',2500); }
+  else { b.className=''; b.textContent='📶 Sin conexión. Espera a tener señal antes de registrar; lo ya guardado está seguro.'; b.style.display='block'; }
+}
+window.addEventListener('offline',()=>netBar(false));
+window.addEventListener('online',()=>{ netBar(true); revisar(); });
+
+/* Guardar: muestra "Guardando…", y si falla la conexión ofrece Reintentar SIN duplicar el registro */
 async function post(data, btn){
-  if(btn) btn.disabled = true; OCUPADO=true;
-  try{ const r=await api(data); DB=r; render(); okMark(); toast('✅ Guardado · '+r.mensaje); return r; }
-  catch(e){ toast(e.message, true); return null; }
-  finally{ if(btn) btn.disabled = false; OCUPADO=false; }
+  data.reqId = data.reqId || nuevoId();
+  if(btn) btn.disabled=true; OCUPADO=true;
+  $('saving-t').textContent='Guardando…'; $('saving').classList.add('on');
+  try{
+    const r=await api(data); DB=r; CARGADO=true; render(); $('saving').classList.remove('on'); okMark(); toast('✅ Guardado · '+r.mensaje); return r;
+  }catch(e){
+    $('saving').classList.remove('on');
+    if(e.red||e.ocupado){
+      const otra=await confirmar('⚠️ No se pudo confirmar',
+        `<p style="line-height:1.5">${esc(e.message)}</p><p class="muted" style="margin-top:8px;line-height:1.5">${e.ocupado?'Varias personas están guardando al mismo tiempo.':'Revisa tu señal o WiFi.'} Toca <b>Reintentar</b>: si el registro ya se había guardado, <b>no se duplicará</b>.</p>`,
+        '🔄 Reintentar','Cancelar');
+      if(otra){ OCUPADO=false; if(btn) btn.disabled=false; return post(data,btn); }
+    } else toast(e.message,true);
+    return null;
+  }finally{ if(btn) btn.disabled=false; OCUPADO=false; }
 }
 
 /* ---------- CONFIRMACIÓN ---------- */
@@ -495,7 +564,7 @@ async function copiarMsg(k,ref,id,sec,btn){
   btn.textContent='✅ Copiado'; waHecho(ref,id,sec);
 }
 function waHecho(ref,id,sec){
-  if(ref&&id) api({action:'marcarWA',tipo:ref,id}).then(r=>{ DB=r; render(); }).catch(()=>{});
+  if(ref&&id) api({action:'marcarWA',tipo:ref,id,reqId:nuevoId()}).then(r=>{ DB=r; render(); }).catch(()=>{});
   if(LOCKS[sec]){ PEND[sec]=false; $(LOCKS[sec][0]).disabled=false; $(LOCKS[sec][1]).style.display='none'; }
 }
 function bloquear(sec){ PEND[sec]=true; $(LOCKS[sec][0]).disabled=true; $(LOCKS[sec][1]).style.display='block'; }
@@ -620,15 +689,34 @@ function pkRender(){
   $('pk-list').innerHTML=L.length?L.map(c=>`<div class="pitem" onclick="elegir('${c.Folio}')"><div><b>${c.Folio}</b><div>${esc(c.Nombre)}</div><span class="muted">${c.Telefono} · ${esc(corto(vendDe(c.Prefijo)))}</span></div><div class="pt"><b>${num(estadoCli(c.Folio).saldo)}</b><span class="muted">puntos</span></div></div>`).join('')
     :'<div class="muted" style="padding:20px;text-align:center">No hay clientes con ese filtro.</div>';
 }
-function elegir(folio){ $(PK.dest+'-folio').value=folio; cerrarPicker(); infoCli(PK.dest); }
-function limpiarSel(p){ $(p+'-folio').value=''; infoCli(p); }
+function elegir(folio){ cerrarPicker(); selCli(PK.dest,folio); }
+function normFolio(q){ const m=q.replace(/\s/g,'').match(/^([A-Z]{3})-?(\d{1,3})$/); return m ? m[1]+'-'+m[2].padStart(3,'0') : ''; }
+function selCli(p,folio){ $(p+'-folio').value=folio; $(p+'-q').value=folio; $(p+'-res').innerHTML=''; infoCli(p); }
+function limpiarSel(p){ $(p+'-folio').value=''; $(p+'-q').value=''; $(p+'-res').innerHTML=''; infoCli(p); }
+function buscarCli(p){
+  const q=U(p+'-q'), box=$(p+'-res');
+  if($(p+'-folio').value && q!==$(p+'-folio').value){ $(p+'-folio').value=''; infoCli(p); }
+  if(!q){ box.innerHTML=''; return; }
+  if(!DB.clientes.length && !CARGADO){ box.innerHTML='<div class="nores">⏳ Cargando clientes… espera un momento.</div>'; return; }
+  const f=normFolio(q);
+  if(f && cli(f)){ selCli(p,f); return; }                       // folio exacto: se elige solo
+  if(q.length<2){ box.innerHTML='<div class="muted" style="margin-top:6px">Sigue escribiendo…</div>'; return; }
+  const qs=q.replace(/\s+/g,' '), qf=q.replace(/\s/g,'');
+  const L=DB.clientes.filter(c=>c.Folio.replace('-','').includes(qf.replace('-',''))||String(c.Nombre).toUpperCase().includes(qs)||String(c.Telefono).includes(qf)).slice(0,8);
+  box.innerHTML=L.length?L.map(c=>`<div class="sug" onclick="selCli('${p}','${c.Folio}')"><div><b>${c.Folio}</b> · ${esc(c.Nombre)}<div class="muted">${c.Telefono} · ${esc(corto(vendDe(c.Prefijo)))}</div></div><div class="pt">${num(estadoCli(c.Folio).saldo)}<div class="muted">pts</div></div></div>`).join('')
+    :`<div class="nores">No se encontró ningún cliente con «${esc(q)}». Revisa el folio de la tarjeta o busca por nombre.</div>`;
+}
 function infoCli(p){
-  const c=cli($(p+'-folio').value), box=$(p+'-info'), sel=$(p+'-sel');
-  if(!c){ sel.classList.remove('on'); sel.innerHTML='<span>👆 TOCA AQUÍ PARA ELEGIR AL CLIENTE</span><span class="ar">▾</span>'; box.innerHTML=''; if(p==='k')calcSaldo(); return; }
-  sel.classList.add('on'); sel.innerHTML=`<span>${c.Folio} · ${esc(c.Nombre)}</span><span class="ar">✎</span>`;
+  const c=cli($(p+'-folio').value), box=$(p+'-info');
+  if(!c){ box.innerHTML=''; if(p==='k')calcSaldo(); return; }
   const e=estadoCli(c.Folio), puede=e.compras>=DB.config.comprasMinCanje;
-  box.innerHTML=`<div class="cli-box">📱 ${c.Telefono} · ${esc(c['Tipo Cliente']||'')}<br>Vendedor: ${esc(corto(vendDe(c.Prefijo)))} · ${zonaDe(c.Folio)}<br>Compras: <b>${e.compras}</b> · Facturado: <b>${money(e.facturado)}</b><br>Saldo: <b style="font-size:17px">${num(e.saldo)} pts</b> <span class="muted">(${money(e.saldo)})</span>
-  ${p==='k'&&!puede?`<br><span style="color:var(--red);font-weight:600">⚠ Aún no tiene compras registradas con puntos</span>`:''}</div>`;
+  const ms=vigentes().filter(m=>m.Folio===c.Folio).sort((a,b)=>String(b.Fecha).localeCompare(String(a.Fecha))).slice(0,5);
+  box.innerHTML=`<div class="selcli"><div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
+    <div><div class="muted">${c.Folio} · ${zonaDe(c.Folio)}</div><div class="nm">${esc(c.Nombre)}</div><div class="muted">📱 ${c.Telefono} · ${esc(c['Tipo Cliente']||'')} · ${esc(corto(vendDe(c.Prefijo)))}</div></div>
+    <button class="btn o sm" onclick="limpiarSel('${p}')">✕ Cambiar</button></div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:10px"><div class="muted">Compras: <b>${e.compras}</b> · Facturado: <b>${money(e.facturado)}</b></div><div style="text-align:right"><div class="muted">Saldo</div><div class="sal">${num(e.saldo)} <span style="font-size:13px">pts</span></div></div></div>
+    ${ms.length?`<div class="hist"><div class="muted" style="font-weight:700">Últimos movimientos</div>${ms.map(m=>`<div><span>${fdate(m.Fecha)} · ${m.Tipo==='COMPRA'?'Compra '+esc(m['Folio Factura']):m.Tipo==='CANJE'?'Canje':'Reinicio'}</span><b style="color:${m.Puntos<0?'var(--red)':'var(--ok)'}">${m.Puntos>0?'+':''}${num(m.Puntos)}</b></div>`).join('')}</div>`:'<div class="muted" style="margin-top:8px">Sin compras todavía.</div>'}
+    ${p==='k'&&!puede?`<div style="color:var(--red);font-weight:700;margin-top:8px">⚠ Aún no tiene compras registradas con puntos</div>`:''}</div>`;
   if(p==='k') calcSaldo();
 }
 
@@ -727,7 +815,7 @@ const ADM={tab:'cli'};
 async function entrarAdmin(){
   const pin=$('adm-pin').value; if(!pin) return;
   $('b-adm').disabled=true;
-  try{ await api({action:'verificarClave',pin}); ADMIN_PIN=pin; try{ sessionStorage.setItem('cf-admin',pin); }catch(e){} $('adm-pin').value=''; adminUI(); okMark(); }
+  try{ await api({action:'verificarClave',pin,reqId:nuevoId()}); ADMIN_PIN=pin; try{ sessionStorage.setItem('cf-admin',pin); }catch(e){} $('adm-pin').value=''; adminUI(); okMark(); }
   catch(e){ toast(e.message,true); }
   finally{ $('b-adm').disabled=false; }
 }
