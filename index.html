@@ -435,7 +435,7 @@ async function llamar(url, opts={}, ms=30000){
     const res=await fetch(url,{...opts,signal:ctl.signal});
     const r=await res.json();
     return r;
-  }catch(e){ const err=new Error(e.name==='AbortError'?'El servidor tardó demasiado en responder.':'No hay conexión con el servidor.'); err.red=true; throw err; }
+  }catch(e){ const err=new Error(e.name==='AbortError'?'El servidor tardó demasiado en responder (señal lenta).':e instanceof SyntaxError?'El servidor respondió algo inesperado (revisa la implementación del Apps Script).':'No hay conexión con el servidor ('+(e.message||'red')+').'); err.red=true; throw err; }
   finally{ clearTimeout(t); }
 }
 async function api(data){
@@ -452,7 +452,16 @@ async function cargar(silencioso){
     if(silencioso && OCUPADO) return;
     DB=r; VER=r.ver||VER; CARGADO=true; render(); netOk(); $('carga').style.display='none';
     $('live-t').textContent='Actualizado '+new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
-  }catch(e){ netFallo(); if(!silencioso) toast('No se pudieron cargar los datos: '+e.message,true); }
+  }catch(e){
+    netFallo();
+    if(!CARGADO){
+      $('carga').innerHTML=`<div style="max-width:420px;margin:0 auto;background:#fff;border-radius:14px;padding:22px;color:var(--txt)">
+        <div style="font-size:34px">📶</div><b style="font-size:17px;color:var(--navy)">No se pudieron cargar los datos</b>
+        <p class="muted" style="margin:10px 0;line-height:1.5">Revisa que tengas internet (abre google.com para probar). Si usas datos, confirma que tu plan tenga datos libres, no solo redes sociales.</p>
+        <div class="muted" style="background:#f6f8fd;border-radius:8px;padding:8px;font-family:monospace;font-size:11px;word-break:break-all">Detalle: ${esc(e.message)} · ${navigator.onLine?'en línea':'sin red'} · ${esc((navigator.connection&&navigator.connection.effectiveType)||'')}</div>
+        <br><button class="btn" style="width:100%" onclick="$('carga').innerHTML='⏳ Cargando datos…';cargar()">🔄 Reintentar</button></div>`;
+    } else if(!silencioso) toast('No se pudieron cargar los datos: '+e.message,true);
+  }
 }
 /* Revisa cada 15 s si alguien registró algo; solo descarga todo si hubo cambios */
 async function revisar(){
