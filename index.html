@@ -4,6 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Cliente Frecuente · Grupo Llanterama</title>
+<meta name="theme-color" content="#1f2f6b">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <style>
@@ -448,6 +452,7 @@ async function api(data){
 async function cargar(silencioso){
   if(silencioso && (OCUPADO||document.hidden)) return;
   try{
+    if(!navigator.onLine) throw new Error('El celular no tiene internet en este momento.');
     const r=await llamar(API_URL+'?action=init',{},40000);
     if(!r.ok) throw new Error(r.error);
     if(silencioso && OCUPADO) return;
@@ -460,7 +465,8 @@ async function cargar(silencioso){
         <div style="font-size:34px">📶</div><b style="font-size:17px;color:var(--navy)">No se pudieron cargar los datos</b>
         <p class="muted" style="margin:10px 0;line-height:1.5">Revisa que tengas internet (abre google.com para probar). Si usas datos, confirma que tu plan tenga datos libres, no solo redes sociales.</p>
         <div class="muted" style="background:#f6f8fd;border-radius:8px;padding:8px;font-family:monospace;font-size:11px;word-break:break-all">Detalle: ${esc(e.message)} · ${navigator.onLine?'en línea':'sin red'} · ${esc((navigator.connection&&navigator.connection.effectiveType)||'')}</div>
-        <br><button class="btn" style="width:100%" onclick="$('carga').innerHTML='⏳ Cargando datos…';cargar()">🔄 Reintentar</button></div>`;
+        <br><button class="btn" style="width:100%" onclick="$('carga').innerHTML='⏳ Cargando datos…';cargar()">🔄 Reintentar</button>
+        ${EN_GOOGLE?'':`<a class="btn o" style="width:100%;margin-top:8px" href="${API_URL}" target="_top">🛟 Abrir versión alterna (Google)</a>`}</div>`;
     } else if(!silencioso) toast('No se pudieron cargar los datos: '+e.message,true);
   }
 }
@@ -944,6 +950,12 @@ function etiquetar(t){
 }
 new MutationObserver(()=>document.querySelectorAll('main table, #modal table').forEach(t=>{ if(t._lab!==t.innerHTML.length){ etiquetar(t); t._lab=t.innerHTML.length; } }))
   .observe(document.body,{childList:true,subtree:true});
+
+/* ---------- APP INSTALABLE Y FUNCIONA SIN SEÑAL (solo en GitHub) ---------- */
+const EN_GOOGLE = /googleusercontent|script\.google/.test(location.hostname);
+if('serviceWorker' in navigator && !EN_GOOGLE && location.protocol==='https:'){
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
 
 /* ---------- INICIO ---------- */
 window.addEventListener('beforeunload',e=>{ if(PEND.alta||PEND.compra||PEND.canje){ e.preventDefault(); e.returnValue=''; } });
