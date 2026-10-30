@@ -1,7 +1,7 @@
 /* Guarda la plataforma en el celular para que abra aunque la señal sea mala.
    Siempre intenta la versión más nueva; si en 4 segundos no llega, usa la guardada.
    Los datos (Google Apps Script) NUNCA se guardan aquí: siempre se piden en vivo. */
-const CACHE = 'cf-v1';
+const CACHE = 'cf-v3';
 const BASE = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(BASE)).catch(() => {}));
@@ -14,7 +14,7 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   const u = new URL(e.request.url);
   if (e.request.method !== 'GET' || u.origin !== location.origin) return;   // datos y Google Fonts: directo a internet
-  const red = fetch(e.request).then(r => {
+  const red = fetch(e.request, { cache: 'no-cache' }).then(r => {   // siempre pregunta a GitHub si hay versión nueva
     if (r.ok) { const cp = r.clone(); caches.open(CACHE).then(c => c.put(e.request, cp)); }
     return r;
   });
