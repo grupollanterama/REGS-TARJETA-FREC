@@ -80,6 +80,7 @@ tr.click{cursor:pointer}tr.click:hover td{background:#fffbea}
 .pitem:active,.pitem:hover{background:#fffbea;border-color:var(--yellow)}
 .pitem .pt{text-align:right;flex-shrink:0}.pitem .pt b{display:block;color:var(--navy);font-size:16px}
 #pk-list{margin-top:8px}
+.paso{font-weight:800;color:var(--navy);font-size:14px;margin-top:6px;padding:8px 10px;background:#fff8dd;border-radius:8px}
 /* buscador */
 .buscador{display:flex;gap:8px}.buscador input{font-size:17px;font-weight:700;letter-spacing:.5px}
 .buscador .btn{flex-shrink:0;white-space:nowrap}
@@ -282,9 +283,9 @@ body:has(#t-clientes.on) main{max-width:none}
       <label>4. Total de la factura (con IVA)</label><input type="number" step="0.01" inputmode="decimal" id="c-imp" placeholder="0.00" oninput="calcPts()">
       <div class="calc">Puntos a otorgar (1%): <b id="c-pts">0.00</b></div>
       <br><button class="btn" id="b-compra" onclick="regCompra()">Registrar compra</button>
-      <div id="compra-lock" class="cli-box lock">⚠️ Envía o copia el mensaje al cliente para poder registrar otra compra.</div>
+      <div id="compra-lock" class="cli-box lock">⚠️ Envía o copia los mensajes al cliente y al asesor para poder registrar otra compra.</div>
     </div>
-    <div class="card msgcard" id="c-msgcard"><h2>Mensaje para el cliente</h2><p class="muted"><b>Obligatorio:</b> envía al cliente el mensaje con sus puntos acumulados.</p><div id="c-wa"></div></div>
+    <div class="card msgcard" id="c-msgcard"><h2>Mensajes de WhatsApp</h2><p class="muted"><b>Obligatorio:</b> envía los 2 mensajes: al cliente con sus puntos y al asesor para que sepa que su cliente compró.</p><div id="c-wa"></div></div>
   </div>
 </section>
 
@@ -311,9 +312,9 @@ body:has(#t-clientes.on) main{max-width:none}
       <div style="display:flex;gap:8px"><input type="number" step="0.01" inputmode="decimal" id="k-pts" placeholder="0.00" oninput="calcSaldo()"><button class="btn o" onclick="usarTodo()">Todo</button></div>
       <div class="calc">Saldo después del canje: <b id="k-rest">—</b></div>
       <br><button class="btn" id="b-canje" onclick="regCanje()">Registrar canje</button>
-      <div id="canje-lock" class="cli-box lock">⚠️ Envía o copia el mensaje al cliente para poder registrar otro canje.</div>
+      <div id="canje-lock" class="cli-box lock">⚠️ Envía o copia los mensajes al cliente y al asesor para poder registrar otro canje.</div>
     </div>
-    <div class="card msgcard" id="k-msgcard"><h2>Mensaje para el cliente</h2><p class="muted"><b>Obligatorio:</b> envía al cliente el mensaje con su saldo.</p><div id="k-wa"></div></div>
+    <div class="card msgcard" id="k-msgcard"><h2>Mensajes de WhatsApp</h2><p class="muted"><b>Obligatorio:</b> envía los 2 mensajes: al cliente con su saldo y al asesor para que sepa que su cliente canjeó.</p><div id="k-wa"></div></div>
   </div>
 </section>
 
@@ -559,33 +560,57 @@ function msgMov(m,c){
 
 /* ---------- WHATSAPP: ENVIAR / COPIAR / FINALIZAR ---------- */
 const WA_MSGS=[];
-const PEND={alta:false,compra:false,canje:false};
+const PEND={alta:{},compra:{},canje:{}};
+const pendiente = sec => !!PEND[sec] && Object.values(PEND[sec]).some(Boolean);
 const LOCKS={alta:['b-alta','alta-lock'],compra:['b-compra','compra-lock'],canje:['b-canje','canje-lock']};
 function waBox(tel,msg,o={}){
   const auto=String(o.estado||'').startsWith('ENVIADO');
   WA_MSGS.push(msg); const k=WA_MSGS.length-1;
   const url='https://wa.me/52'+tel+'?text='+encodeURIComponent(msg);
-  const a=`'${o.ref||''}','${o.id||''}','${o.sec||''}'`;
+  const a=`'${o.ref||''}','${o.id||''}','${o.sec||''}','${o.key||''}'`;
   return `${auto?'<div class="cli-box" style="background:#dcfce7;color:#166534;font-weight:700">✅ WhatsApp enviado automáticamente al cliente</div>':''}
   <div class="wa">${esc(msg)}</div>
   <div class="wabtns">
-    ${auto?'':`<a class="btn g" href="${url}" target="_blank" onclick="waHecho(${a})">${o.label||'📲 Enviar por WhatsApp'}</a>
+    ${auto?'':`<a class="btn g" href="${url}" target="_blank" onclick="waHecho(${a},this)">${o.label||'📲 Enviar por WhatsApp'}</a>
     <button class="btn o" onclick="copiarMsg(${k},${a},this)">📋 Copiar mensaje</button>`}
-    ${o.sec?`<button class="btn fin" onclick="finalizar('${o.sec}')">✔ Finalizar</button>`:''}
+    ${o.fin?`<button class="btn fin" onclick="finalizar('${o.sec}')">✔ Finalizar</button>`:''}
   </div>`;
 }
-async function copiarMsg(k,ref,id,sec,btn){
+async function copiarMsg(k,ref,id,sec,key,btn){
   try{ await navigator.clipboard.writeText(WA_MSGS[k]); }
   catch(e){ const t=document.createElement('textarea'); t.value=WA_MSGS[k]; document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove(); }
-  btn.textContent='✅ Copiado'; waHecho(ref,id,sec);
+  btn.textContent='✅ Copiado'; waHecho(ref,id,sec,key);
 }
-function waHecho(ref,id,sec){
+function waHecho(ref,id,sec,key,el){
+  if(el) setTimeout(()=>{ el.textContent='✅ Enviado'; },300);
   if(ref&&id) api({action:'marcarWA',tipo:ref,id,reqId:nuevoId()}).then(r=>{ DB=r; render(); }).catch(()=>{});
-  if(LOCKS[sec]){ PEND[sec]=false; $(LOCKS[sec][0]).disabled=false; $(LOCKS[sec][1]).style.display='none'; }
+  if(LOCKS[sec]){
+    if(key) PEND[sec][key]=false; else PEND[sec]={};
+    if(!pendiente(sec)){ $(LOCKS[sec][0]).disabled=false; $(LOCKS[sec][1]).style.display='none'; }
+  }
 }
-function bloquear(sec){ PEND[sec]=true; $(LOCKS[sec][0]).disabled=true; $(LOCKS[sec][1]).style.display='block'; }
+function bloquear(sec,keys){ PEND[sec]={}; keys.forEach(k=>PEND[sec][k]=true); if(!pendiente(sec)) return; $(LOCKS[sec][0]).disabled=true; $(LOCKS[sec][1]).style.display='block'; }
+/* Avisos para el asesor */
+function msgAsesorCompra(c,fac,imp,pts,saldo,fecha){
+  return `📢 *AVISO · CLIENTE FRECUENTE*\n\nTu cliente *${c.Nombre}* (${c.Folio}) acudió a la tienda y realizó una compra.\n\nFecha: ${fdate(fecha)}\nFactura: ${fac}\nImporte: ${money(imp)}\nPuntos ganados: ${num(pts)}\n⭐ Saldo actual: ${num(saldo)} pts\n\n📱 Cliente: ${c.Telefono}`;
+}
+function msgAsesorCanje(c,pts,det,saldo,fecha){
+  return `📢 *AVISO · CLIENTE FRECUENTE*\n\nTu cliente *${c.Nombre}* (${c.Folio}) acudió a la tienda y canjeó puntos.\n\nFecha: ${fdate(fecha)}\nPuntos utilizados: ${num(pts)} (${money(pts)})\n${det}\n⭐ Saldo restante: ${num(saldo)} pts\n\n📱 Cliente: ${c.Telefono}`;
+}
+/* Arma los dos mensajes (cliente y asesor) después de registrar */
+function dosMensajes(p,sec,c,r,msgCli,msgAse){
+  const v=vendDe(c.Prefijo), auto=String(r.wa||'').startsWith('ENVIADO');
+  $(p+'-wa').innerHTML=`<div class="paso">1️⃣ Al cliente · ${esc(c.Nombre)}</div>`+waBox(c.Telefono,msgCli,{estado:r.wa,ref:'MOV',id:r.id,sec,key:'cli'})+
+    (v&&v.Celular?`<div class="paso" style="margin-top:18px">2️⃣ Al asesor · ${esc(v.Asesor)}</div>`+waBox(v.Celular,msgAse,{sec,key:'ase',label:'📲 Enviar al asesor',fin:true})
+      :`<div class="cli-box lock" style="display:block;margin-top:14px">⚠️ Este vendedor no tiene celular registrado en la hoja Vendedores.</div><div class="wabtns"><button class="btn fin" onclick="finalizar('${sec}')">✔ Finalizar</button></div>`);
+  $(p+'-msgcard').style.display='block';
+  bloquear(sec,[...(auto?[]:['cli']),...(v&&v.Celular?['ase']:[])]);
+}
 function finalizar(sec){
-  if(PEND[sec]) return toast('Primero envía o copia el mensaje al cliente',true);
+  if(pendiente(sec)){
+    const f=[PEND[sec].cli?'al cliente':'',PEND[sec].ase?'al asesor':''].filter(Boolean).join(' y ');
+    return toast('Primero envía o copia el mensaje '+f,true);
+  }
   if(sec==='admin'){ cerrarModal(); return; }
   const p={alta:'a',compra:'c',canje:'k'}[sec];
   $(p+'-wa').innerHTML=''; $(p+'-msgcard').style.display='none';
@@ -664,7 +689,7 @@ function sugerirFolio(){
   $('a-hint').textContent = `${usados.length} de ${v.Cantidad} tarjetas registradas · ${v.Zona}`;
 }
 async function altaCliente(){
-  if(PEND.alta) return toast('Primero envía o copia el mensaje de bienvenida del cliente anterior',true);
+  if(pendiente('alta')) return toast('Primero envía o copia el mensaje de bienvenida del cliente anterior',true);
   const v=vendDe($('a-vend').value), nombre=U('a-nombre'), tel=$('a-tel').value.replace(/\D/g,'');
   if(!v) return toast('Elige el vendedor',true);
   if(!nombre) return toast('Escribe el nombre del cliente',true);
@@ -677,9 +702,9 @@ async function altaCliente(){
     tipoCliente:$('a-tipo').value,unidades:$('a-unid').value,notas:U('a-notas')},$('b-alta'));
   if(!r) return;
   const c=cli(r.folio);
-  $('a-wa').innerHTML=waBox(c.Telefono,msgBienvenida(c),{estado:r.wa,ref:'CLI',id:c.Folio,sec:'alta'});
+  $('a-wa').innerHTML=waBox(c.Telefono,msgBienvenida(c),{estado:r.wa,ref:'CLI',id:c.Folio,sec:'alta',key:'cli',fin:true});
   $('a-msgcard').style.display='block';
-  if(!String(r.wa||'').startsWith('ENVIADO')) bloquear('alta');
+  bloquear('alta',String(r.wa||'').startsWith('ENVIADO')?[]:['cli']);
   ['a-nombre','a-tel','a-unid','a-notas'].forEach(i=>$(i).value='');
   verA('a-msgcard');
 }
@@ -739,7 +764,7 @@ function infoCli(p){
 /* ---------- COMPRA ---------- */
 function calcPts(){ $('c-pts').textContent=num(r2(Number($('c-imp').value||0)*DB.config.porcentaje)); }
 async function regCompra(){
-  if(PEND.compra) return toast('Primero envía o copia el mensaje de la compra anterior',true);
+  if(pendiente('compra')) return toast('Primero envía o copia el mensaje de la compra anterior',true);
   const c=cli($('c-folio').value); if(!c) return toast('Primero elige al cliente',true);
   const fac=U('c-fac'), imp=r2(Number($('c-imp').value)), pts=r2(imp*DB.config.porcentaje);
   if(!fac) return toast('Captura el folio de factura',true);
@@ -751,9 +776,7 @@ async function regCompra(){
   if(!ok) return;
   const r=await post({action:'registrarCompra',usuario:c.Vendedor,folio:c.Folio,fecha:$('c-fecha').value,factura:fac,importe:imp},$('b-compra'));
   if(!r) return;
-  $('c-wa').innerHTML=waBox(c.Telefono,msgCompra(c,fac,imp,r.puntos,r.saldo),{estado:r.wa,ref:'MOV',id:r.id,sec:'compra'});
-  $('c-msgcard').style.display='block';
-  if(!String(r.wa||'').startsWith('ENVIADO')) bloquear('compra');
+  dosMensajes('c','compra',c,r,msgCompra(c,fac,imp,r.puntos,r.saldo),msgAsesorCompra(c,fac,imp,r.puntos,r.saldo,$('c-fecha').value));
   $('c-fac').value=''; $('c-imp').value=''; calcPts();
   verA('c-msgcard');
 }
@@ -764,7 +787,7 @@ function artPts(){ const a=ARTICULOS.find(x=>x.nombre===$('k-art').value); if(a&
 function usarTodo(){ const c=cli($('k-folio').value); if(c){$('k-pts').value=estadoCli(c.Folio).saldo; calcSaldo();} }
 function calcSaldo(){ const c=cli($('k-folio').value); $('k-rest').textContent=c?num(estadoCli(c.Folio).saldo-Number($('k-pts').value||0)):'—'; }
 async function regCanje(){
-  if(PEND.canje) return toast('Primero envía o copia el mensaje del canje anterior',true);
+  if(pendiente('canje')) return toast('Primero envía o copia el mensaje del canje anterior',true);
   const c=cli($('k-folio').value); if(!c) return toast('Primero elige al cliente',true);
   const t=document.querySelector('[name=k-tipo]:checked').value, pts=r2(Number($('k-pts').value)), e=estadoCli(c.Folio);
   const fac=U('k-fac'), art=$('k-art').value;
@@ -778,9 +801,7 @@ async function regCanje(){
   if(!ok) return;
   const r=await post({action:'registrarCanje',usuario:c.Vendedor,folio:c.Folio,fecha:$('k-fecha').value,tipoCanje:t,puntos:pts,factura:t==='Compra'?fac:'',articulo:t==='Compra'?'':art},$('b-canje'));
   if(!r) return;
-  $('k-wa').innerHTML=waBox(c.Telefono,msgCanje(c,pts,detCanje(t,fac,art),r.saldo),{estado:r.wa,ref:'MOV',id:r.id,sec:'canje'});
-  $('k-msgcard').style.display='block';
-  if(!String(r.wa||'').startsWith('ENVIADO')) bloquear('canje');
+  dosMensajes('k','canje',c,r,msgCanje(c,pts,detCanje(t,fac,art),r.saldo),msgAsesorCanje(c,pts,detCanje(t,fac,art),r.saldo,$('k-fecha').value));
   $('k-pts').value=''; $('k-fac').value=''; calcSaldo();
   verA('k-msgcard');
 }
@@ -804,22 +825,22 @@ function tablaMovs(){
   MOV_ROWS=[...DB.movimientos].reverse().filter(m=>filtroFecha(m,d,h)&&(!t||m.Tipo.startsWith(t))&&(!z||zonaDe(m.Folio)===z)&&(!v||m.Folio.startsWith(v))&&(!f||m.Folio===f))
     .map(m=>({...m,Cliente:cli(m.Folio)?.Nombre||'',Zona:zonaDe(m.Folio)}));
   $('mov-n').textContent=MOV_ROWS.length+' movimiento(s)';
-  $('tb-movs').innerHTML='<tr><th>Fecha</th><th>Folio</th><th>Cliente</th><th>Zona</th><th>Tipo</th><th>Factura</th><th class="n">Importe</th><th class="n">Puntos</th><th>Uso</th><th>Artículo</th><th>Registró</th><th>WhatsApp</th></tr>'+
-  MOV_ROWS.map(m=>`<tr><td>${fdate(m.Fecha)}</td><td>${m.Folio}</td><td>${esc(m.Cliente)}</td><td>${m.Zona}</td><td>${pill(m.Tipo)}</td><td>${esc(m['Folio Factura'])}</td><td class="n">${m.Importe?money(m.Importe):''}</td><td class="n" style="color:${m.Puntos<0?'var(--red)':'var(--ok)'}">${num(m.Puntos)}</td><td>${m['Tipo Canje']==='Compra'?'DESCUENTO':m['Tipo Canje']?'ARTÍCULO':''}</td><td>${esc(m['Artículo'])}</td><td>${esc(m['Registró'])}</td><td>${String(m.WhatsApp||'').startsWith('ENVIADO')?'✅':'⏳'}</td></tr>`).join('');
+  $('tb-movs').innerHTML='<tr><th>Fecha</th><th>Hora</th><th>Folio</th><th>Cliente</th><th>Zona</th><th>Tipo</th><th>Factura</th><th class="n">Importe</th><th class="n">Puntos</th><th>Uso</th><th>Artículo</th><th>Registró</th><th>WhatsApp</th></tr>'+
+  MOV_ROWS.map(m=>`<tr><td>${fdate(m.Fecha)}</td><td>${m.Hora||''}</td><td>${m.Folio}</td><td>${esc(m.Cliente)}</td><td>${m.Zona}</td><td>${pill(m.Tipo)}</td><td>${esc(m['Folio Factura'])}</td><td class="n">${m.Importe?money(m.Importe):''}</td><td class="n" style="color:${m.Puntos<0?'var(--red)':'var(--ok)'}">${num(m.Puntos)}</td><td>${m['Tipo Canje']==='Compra'?'DESCUENTO':m['Tipo Canje']?'ARTÍCULO':''}</td><td>${esc(m['Artículo'])}</td><td>${esc(m['Registró'])}</td><td>${String(m.WhatsApp||'').startsWith('ENVIADO')?'✅':'⏳'}</td></tr>`).join('');
 }
 
 /* ---------- DETALLE DE CLIENTE (solo consulta) ---------- */
 function detalle(folio){
   const c=cli(folio); if(!c) return;
   const e=estadoCli(folio), v=vendDe(c.Prefijo);
-  const ms=DB.movimientos.filter(m=>m.Folio===folio).sort((a,b)=>String(a.Fecha).localeCompare(String(b.Fecha)));
+  const ms=DB.movimientos.filter(m=>m.Folio===folio).sort((a,b)=>(String(a.Fecha)+(a.Hora||'')).localeCompare(String(b.Fecha)+(b.Hora||'')));
   let s=0;
   $('modal-c').innerHTML=`<div class="mhead"><h2 style="margin:0">${c.Folio} · ${esc(c.Nombre)}</h2><button class="btn o sm" onclick="cerrarModal()">✕</button></div>
   <div class="cli-box">📱 ${c.Telefono} · ${esc(c['Tipo Cliente']||'')} · ${c.Unidades||'?'} unidades<br>Alta: ${fdate(c['Fecha Alta'])} · ${esc(corto(v))} · ${zonaDe(c.Folio)}</div>
   ${c.Notas?`<div class="muted" style="margin-top:6px">📝 ${esc(c.Notas)}</div>`:''}
   <div class="kpis" style="margin-top:14px">${[[e.compras,'Compras'],[money(e.facturado),'Facturado'],[num(e.ganados),'Pts ganados'],[num(e.usados),'Pts usados'],[num(e.saldo),'Saldo']].map(([b,x])=>`<div class="kpi"><b>${b}</b><span>${x}</span></div>`).join('')}</div>
-  <div class="tw"><table><tr><th>Fecha</th><th>Tipo</th><th>Factura</th><th class="n">Importe</th><th class="n">Puntos</th><th>Detalle</th><th class="n">Saldo</th></tr>
-  ${ms.map(m=>{ if(!m.Tipo.startsWith('ANULADO')) s=r2(s+Number(m.Puntos)); return `<tr><td>${fdate(m.Fecha)}</td><td>${pill(m.Tipo)}</td><td>${esc(m['Folio Factura'])}</td><td class="n">${m.Importe?money(m.Importe):''}</td><td class="n">${num(m.Puntos)}</td><td>${esc(m['Artículo']||'')}</td><td class="n"><b>${num(s)}</b></td></tr>`;}).join('')}</table></div>
+  <div class="tw"><table><tr><th>Fecha</th><th>Hora</th><th>Tipo</th><th>Factura</th><th class="n">Importe</th><th class="n">Puntos</th><th>Detalle</th><th class="n">Saldo</th></tr>
+  ${ms.map(m=>{ if(!m.Tipo.startsWith('ANULADO')) s=r2(s+Number(m.Puntos)); return `<tr><td>${fdate(m.Fecha)}</td><td>${m.Hora||''}</td><td>${pill(m.Tipo)}</td><td>${esc(m['Folio Factura'])}</td><td class="n">${m.Importe?money(m.Importe):''}</td><td class="n">${num(m.Puntos)}</td><td>${esc(m['Artículo']||'')}</td><td class="n"><b>${num(s)}</b></td></tr>`;}).join('')}</table></div>
   <h2 style="margin-top:16px">Estado de cuenta para el cliente</h2>
   ${waBox(c.Telefono,`Hola ${c.Nombre}, te compartimos tu estado de cuenta *Cliente Frecuente Grupo Llanterama* (${c.Folio}):\n\nCompras: ${e.compras}\nPuntos acumulados: ${num(e.ganados)}\nPuntos utilizados: ${num(e.usados)}\n*Saldo disponible: ${num(e.saldo)} puntos* (${money(e.saldo)})\n\n¡Ponte en contacto con tu asesor para hacer uso de ellos!`+firma(c))}`;
   $('modal').classList.add('on');
@@ -849,7 +870,7 @@ function adminLista(){
       .filter(m=>!q||[m.Folio,cli(m.Folio)?.Nombre,m['Folio Factura'],m['Artículo']].join(' ').toUpperCase().includes(q)).slice(0,150);
     html=L.map(m=>{ const vig=m.Tipo===T, c=cli(m.Folio);
       const det=T==='COMPRA'?`${esc(m['Folio Factura'])} · ${money(m.Importe)} · +${num(m.Puntos)} pts`:`${num(-m.Puntos)} pts · ${m['Tipo Canje']==='Compra'?'FACT '+esc(m['Folio Factura']):esc(m['Artículo'])}`;
-      return `<div class="aitem ${vig?'':'off'}"><div><b>${m.Folio}</b> · ${esc(c?.Nombre)} ${vig?'':'<span class="pill p-a">ANULADO</span>'}<div class="muted">${fdate(m.Fecha)} · ${det} · ${esc(m['Registró']||'')}</div></div>
+      return `<div class="aitem ${vig?'':'off'}"><div><b>${m.Folio}</b> · ${esc(c?.Nombre)} ${vig?'':'<span class="pill p-a">ANULADO</span>'}<div class="muted">${fdate(m.Fecha)}${m.Hora?' '+m.Hora:''} · ${det} · ${esc(m['Registró']||'')}</div></div>
       ${vig?`<div class="acts"><button class="btn sm" onclick="admEditMov('${m.ID}')">✏️ Editar</button><button class="btn r sm" onclick="admAnular('${m.ID}')">Anular</button></div>`:''}</div>`; }).join('');
   }
   $('adm-list').innerHTML=html||'<div class="muted" style="padding:20px;text-align:center">Sin registros.</div>';
@@ -858,7 +879,7 @@ function admResultado(c,msg){
   const v=vendDe(c.Prefijo);
   $('modal-c').innerHTML=`<div class="okline">✅ Cambio guardado</div><h2>Mensaje actualizado para el cliente</h2>
   <p class="muted">Envíalo al asesor <b>${esc(v?.Asesor||'')}</b> (${v?.Celular||''}) para que se lo reenvíe a <b>${esc(c.Nombre)}</b> · ${c.Telefono}.</p>
-  ${waBox(v?.Celular||c.Telefono,msg,{sec:'admin',label:'📲 Enviar al asesor'})}`;
+  ${waBox(v?.Celular||c.Telefono,msg,{sec:'admin',label:'📲 Enviar al asesor',fin:true})}`;
   $('modal').classList.add('on');
 }
 function admEditCli(folio){
@@ -958,7 +979,7 @@ if('serviceWorker' in navigator && !EN_GOOGLE && location.protocol==='https:'){
 }
 
 /* ---------- INICIO ---------- */
-window.addEventListener('beforeunload',e=>{ if(PEND.alta||PEND.compra||PEND.canje){ e.preventDefault(); e.returnValue=''; } });
+window.addEventListener('beforeunload',e=>{ if(pendiente('alta')||pendiente('compra')||pendiente('canje')){ e.preventDefault(); e.returnValue=''; } });
 ['a-fecha','c-fecha','k-fecha'].forEach(i=>$(i).value=hoy());
 document.querySelectorAll('.zsel').forEach(s=>s.innerHTML='<option value="">TODAS</option>'+ZORD.map(z=>`<option>${z}</option>`).join(''));
 $('k-art').innerHTML=ARTICULOS.map(a=>`<option value="${a.nombre}">${a.nombre}${a.puntos?' · '+a.puntos+' pts':''}</option>`).join('');
