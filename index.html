@@ -148,7 +148,7 @@ body:has(#t-clientes.on) main{max-width:none}
 @media(max-width:700px){
   body{font-size:15px;padding-bottom:78px}
   header{padding:12px 14px}
-  header h1{font-size:18px} header small{display:none}
+  header h1{font-size:18px} header small{display:block;font-size:10px;opacity:.65} header .subt{display:none}
   header .btn{padding:8px 10px;font-size:13px}
   #live{display:none}
   main{padding:14px 10px 30px}
@@ -192,10 +192,10 @@ body:has(#t-clientes.on) main{max-width:none}
 </head>
 <body>
 <header>
-  <div><h1>Cliente <span>Frecuente</span></h1><small>Sistema de recompensas · Grupo Llanterama</small></div>
+  <div><h1>Cliente <span>Frecuente</span></h1><small><span class="subt">Sistema de recompensas · Grupo Llanterama · </span><span id="appver"></span></small></div>
   <div style="display:flex;gap:8px;align-items:center">
     <span id="live"><i></i><span id="live-t">En vivo</span></span>
-    <button class="btn y" onclick="cargar()">↻ Actualizar</button>
+    <button class="btn y" onclick="cargar();revisarVersion(true)">↻ Actualizar</button>
   </div>
 </header>
 <nav id="nav">
@@ -391,6 +391,7 @@ body:has(#t-clientes.on) main{max-width:none}
 
 <script>
 /* ====== CONFIGURACIÓN ====== */
+const APP_VER = '2026-10-30-1100';   // cambia en cada actualización
 const API_URL = 'https://script.google.com/macros/s/AKfycbwDeFwj4W8EBWeZP0o-IVuiTODuGP5rN8HWM4pdPiP1RAU5s8bFCs5rdlHbHONrfDaeOw/exec';
 const PROMO_URL = 'https://grupollanterama.github.io/PROMOCIONES-DEL-MES/';
 /* Catálogo de artículos promocionales (puntos de EJEMPLO, ajústalos) */
@@ -978,7 +979,28 @@ if('serviceWorker' in navigator && !EN_GOOGLE && location.protocol==='https:'){
   navigator.serviceWorker.register('sw.js').catch(()=>{});
 }
 
+/* ---------- BUSCAR VERSIÓN NUEVA DE LA PÁGINA ---------- */
+let REVISANDO=false;
+async function revisarVersion(forzar){
+  if(EN_GOOGLE||REVISANDO||!navigator.onLine) return;
+  REVISANDO=true;
+  try{
+    const txt=await fetch(location.pathname+'?v='+Date.now(),{cache:'no-store'}).then(r=>r.text());
+    const m=txt.match(/const APP_VER = '([^']+)'/);
+    if(m && m[1]!==APP_VER){
+      if('caches' in window){ for(const k of await caches.keys()) await caches.delete(k); }
+      const reg='serviceWorker' in navigator && await navigator.serviceWorker.getRegistration();
+      if(reg) await reg.update().catch(()=>{});
+      if(!pendiente('alta')&&!pendiente('compra')&&!pendiente('canje')){ toast('🔄 Actualizando a la versión nueva…'); setTimeout(()=>location.reload(),800); }
+    } else if(forzar) toast('✅ Ya tienes la versión más reciente');
+  }catch(e){}
+  REVISANDO=false;
+}
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) revisarVersion(); });
+setTimeout(revisarVersion,2500);
+
 /* ---------- INICIO ---------- */
+$('appver').textContent='versión '+APP_VER.slice(5,10).split('-').reverse().join('/')+' '+APP_VER.slice(11,13)+':'+APP_VER.slice(13,15);
 window.addEventListener('beforeunload',e=>{ if(pendiente('alta')||pendiente('compra')||pendiente('canje')){ e.preventDefault(); e.returnValue=''; } });
 ['a-fecha','c-fecha','k-fecha'].forEach(i=>$(i).value=hoy());
 document.querySelectorAll('.zsel').forEach(s=>s.innerHTML='<option value="">TODAS</option>'+ZORD.map(z=>`<option>${z}</option>`).join(''));
