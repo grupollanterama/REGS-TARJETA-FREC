@@ -81,6 +81,41 @@ tr.click{cursor:pointer}tr.click:hover td{background:#fffbea}
 .pitem .pt{text-align:right;flex-shrink:0}.pitem .pt b{display:block;color:var(--navy);font-size:16px}
 #pk-list{margin-top:8px}
 .paso{font-weight:800;color:var(--navy);font-size:14px;margin-top:6px;padding:8px 10px;background:#fff8dd;border-radius:8px}
+/* menú más */
+.navmas{display:none!important}
+.masg{display:grid;gap:10px;margin-top:10px}
+.masb{display:flex;gap:14px;align-items:center;text-align:left;padding:16px;border:1px solid var(--line);border-radius:12px;background:#fff;cursor:pointer;font:inherit}
+.masb b{font-size:26px}.masb strong{display:block;color:var(--navy);font-size:16px}.masb small{color:var(--mut)}
+/* precios y cotizador */
+.prod{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:12px;border:1px solid var(--line);border-radius:10px;margin-bottom:8px;background:#fff}
+.prod .pd b{display:block;font-size:14px}.prod .pp{text-align:right;flex-shrink:0}
+.prod .pr{font-size:18px;font-weight:800;color:var(--navy);margin-bottom:6px}
+.exis{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.exis span{font-size:11px;padding:3px 8px;border-radius:12px;background:#f1f3f8;color:var(--mut);font-weight:600}
+.exis span.si{background:#dcfce7;color:#166534}
+.part{display:grid;grid-template-columns:1fr auto auto auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.part .pd b{display:block;font-size:13px}
+.qty{display:flex;align-items:center;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.qty button{border:0;background:#f1f3f8;width:34px;height:36px;font-size:18px;font-weight:800;color:var(--navy);cursor:pointer}
+.qty input{width:46px;border:0;text-align:center;padding:6px 2px;font-weight:700;border-radius:0}
+.part .imp{font-weight:800;color:var(--navy);min-width:86px;text-align:right}
+.part .del{border:0;background:none;font-size:18px;cursor:pointer}
+.ctot{display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding:14px;background:#fff8dd;border-radius:10px;font-weight:700}
+.ctot b{font-size:24px;color:var(--navy)}.ctot small{color:var(--mut);font-weight:500}
+.hitem{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:12px;border:1px solid var(--line);border-radius:10px;margin-bottom:8px}
+/* resumen desplegable */
+#tb-rep tr.vrow{cursor:pointer}#tb-rep tr.vrow:hover td{background:#fffbea}
+#tb-rep tr.exp td{background:#f8f9fd;white-space:normal;padding:8px 10px 12px}
+.dv{border:1px solid var(--line);border-radius:10px;background:#fff;margin-top:8px}
+.dvh{display:flex;justify-content:space-between;gap:10px;padding:10px 12px;cursor:pointer;font-size:13px;flex-wrap:wrap}
+.dvh:hover{background:#fffbea}
+.dvm{border-top:1px solid var(--line);padding:8px 12px 12px;font-size:12.5px}
+.dvm .mv{display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-bottom:1px dashed #eceff5}
+/* medidas */
+.medbox{margin-top:14px;padding:12px;border:1px dashed #c7cfe2;border-radius:12px;background:#fbfcff}
+.medt{font-weight:800;color:var(--navy);font-size:14px}.medt span{font-weight:600;color:var(--red);font-size:12px}
+.chipsel{display:flex;flex-wrap:wrap;gap:6px}
+.chipsel .chip{padding:9px 12px}
 /* buscador */
 .buscador{display:flex;gap:8px}.buscador input{font-size:17px;font-weight:700;letter-spacing:.5px}
 .buscador .btn{flex-shrink:0;white-space:nowrap}
@@ -186,6 +221,13 @@ body:has(#t-clientes.on) main{max-width:none}
   table.cards td[colspan]::before{content:none}
   #tb-rep td:nth-child(3),#tb-rep td:nth-child(6),#tb-rep td:nth-child(7),#tb-rep td:nth-child(8){display:none}
   #tb-rep tr{padding:4px 10px}
+  nav .navx{display:none!important} .navmas{display:flex!important}
+  table.cards tr.exp{padding:4px 6px;background:#f8f9fd}
+  table.cards tr.exp td{display:block;text-align:left}
+  table.cards tr.exp td::before{content:none}
+  .prod{flex-direction:column;align-items:stretch}.prod .pp{display:flex;justify-content:space-between;align-items:center;text-align:left}.prod .pr{margin:0}
+  .part{grid-template-columns:1fr auto;grid-template-areas:"d d" "q i"}.part .pd{grid-column:1/-1}.part .del{position:absolute;right:6px}
+  .part{position:relative;padding-right:30px}
 }
 @media(max-width:600px){.row{grid-template-columns:1fr}}
 </style>
@@ -195,7 +237,7 @@ body:has(#t-clientes.on) main{max-width:none}
   <div><h1>Cliente <span>Frecuente</span></h1><small><span class="subt">Sistema de recompensas · Grupo Llanterama · </span><span id="appver"></span></small></div>
   <div style="display:flex;gap:8px;align-items:center">
     <span id="live"><i></i><span id="live-t">En vivo</span></span>
-    <button class="btn y" onclick="cargar();revisarVersion(true)">↻ Actualizar</button>
+    <button class="btn y" onclick="cargar();CAT.ok=false;cargarCatalogos();revisarVersion(true)">↻ Actualizar</button>
   </div>
 </header>
 <nav id="nav">
@@ -203,9 +245,12 @@ body:has(#t-clientes.on) main{max-width:none}
   <button data-t="alta"><b>➕</b><span>Alta</span></button>
   <button data-t="compra"><b>🛒</b><span>Compra</span></button>
   <button data-t="canje"><b>🎁</b><span>Canje</span></button>
-  <button data-t="clientes"><b>👥</b><span>Clientes</span></button>
-  <button data-t="movs"><b>📋</b><span>Movs.</span></button>
-  <button data-t="admin"><b>🔒</b><span>Admin</span></button>
+  <button data-t="precios"><b>💲</b><span>Precios</span></button>
+  <button data-t="cot"><b>🧾</b><span>Cotizar</span></button>
+  <button data-t="clientes" class="navx"><b>👥</b><span>Clientes</span></button>
+  <button data-t="movs" class="navx"><b>📋</b><span>Movs.</span></button>
+  <button data-t="admin" class="navx"><b>🔒</b><span>Admin</span></button>
+  <button data-t="mas" class="navmas"><b>☰</b><span>Más</span></button>
 </nav>
 
 <div id="carga" style="text-align:center;padding:40px 20px;color:var(--mut);font-weight:600">⏳ Cargando datos…</div>
@@ -251,9 +296,12 @@ body:has(#t-clientes.on) main{max-width:none}
         <div><label>Fecha de entrega</label><input type="date" id="a-fecha"></div>
       </div>
       <label>Tipo de cliente</label><select id="a-tipo"><option>TAXI</option><option>MICROBÚS</option><option>COLECTIVA</option><option>FLOTILLA</option><option>PARTICULAR</option><option>OTRO</option></select>
-      <div class="row">
-        <div><label>No. de unidades</label><input type="number" inputmode="numeric" id="a-unid" min="0"></div>
-        <div><label>Notas (opcional)</label><input id="a-notas" type="text"></div>
+      <label>No. de unidades</label><input type="number" inputmode="numeric" id="a-unid" min="0">
+      <div class="medbox">
+        <div class="medt">🛞 Llantas que utiliza el cliente <span>(obligatorio)</span></div>
+        <label>1. Rin <span class="muted">· puedes elegir varios</span></label><div class="chipsel" id="a-rin"></div>
+        <label>2. Medidas <span class="muted">· según el rin elegido</span></label><div class="chipsel" id="a-med"></div>
+        <label>3. Marca que usa <span class="muted">· puedes elegir varias</span></label><div class="chipsel" id="a-mar"></div>
       </div>
       <br><button class="btn" id="b-alta" onclick="altaCliente()">Registrar tarjeta</button>
       <div id="alta-lock" class="cli-box lock">⚠️ Envía o copia el mensaje de bienvenida para poder registrar otra tarjeta.</div>
@@ -351,6 +399,49 @@ body:has(#t-clientes.on) main{max-width:none}
   </div>
 </section>
 
+<!-- LISTA DE PRECIOS -->
+<section class="tab" id="t-precios">
+  <div class="card">
+    <h2>💲 Lista de precios Cliente Frecuente</h2>
+    <p class="muted" style="margin-bottom:10px">Precio final con IVA incluido. Toca <b>+ Cotizar</b> para agregar un producto a la cotización.</p>
+    <div class="chiprow" id="pr-cat"></div>
+    <div class="chiprow" id="pr-marca"></div>
+    <input type="search" id="pr-q" placeholder="BUSCA POR MEDIDA O DESCRIPCIÓN (EJ. 185/70 R13)" oninput="precios()" autocomplete="off" style="margin-top:6px">
+    <div class="muted" id="pr-n" style="margin:8px 0"></div>
+    <div id="pr-list"></div>
+  </div>
+</section>
+
+<!-- COTIZADOR -->
+<section class="tab" id="t-cot">
+  <div class="grid g2">
+    <div class="card">
+      <h2>🧾 Cotizador Cliente Frecuente</h2>
+      <label>1. Cliente · folio de tarjeta o nombre</label>
+      <div class="buscador"><input id="q-q" type="text" placeholder="EJ. TMG-002 O NOMBRE" autocomplete="off" autocapitalize="characters" oninput="buscarCli('q')"><button class="btn o" onclick="abrirPicker('q')">☰ Lista</button></div>
+      <div id="q-res"></div>
+      <input type="hidden" id="q-folio">
+      <div id="q-info"></div>
+      <label>2. Busca el producto y tócalo para agregarlo</label>
+      <div class="chiprow" id="ct-cat"></div>
+      <input id="ct-q" type="search" placeholder="MEDIDA O DESCRIPCIÓN (EJ. 185/70 R13)" oninput="ctBuscar()" autocomplete="off">
+      <div id="ct-res"></div>
+    </div>
+    <div class="card" id="ct-card">
+      <h2>3. Partidas de la cotización</h2>
+      <div id="ct-part"></div>
+      <div class="ctot"><span>Total <small>(IVA incluido)</small></span><b id="ct-total">$0.00</b></div>
+      <div class="wabtns"><button class="btn ok" id="b-cot" onclick="generarCot()">📄 Generar cotización</button><button class="btn r" onclick="ctVaciar()">Vaciar</button></div>
+      <div id="ct-out"></div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <h2>Cotizaciones registradas</h2>
+    <input type="search" id="ch-q" placeholder="BUSCAR POR FOLIO, CLIENTE O VENDEDOR" oninput="ctHist()" autocomplete="off">
+    <div id="ct-hist" style="margin-top:10px"></div>
+  </div>
+</section>
+
 <!-- ADMIN -->
 <section class="tab" id="t-admin">
   <div class="card" id="adm-lock" style="max-width:420px;margin:0 auto">
@@ -391,7 +482,7 @@ body:has(#t-clientes.on) main{max-width:none}
 
 <script>
 /* ====== CONFIGURACIÓN ====== */
-const APP_VER = '2026-10-30-1100';   // cambia en cada actualización
+const APP_VER = '2026-11-07-1800';   // cambia en cada actualización
 const API_URL = 'https://script.google.com/macros/s/AKfycbwDeFwj4W8EBWeZP0o-IVuiTODuGP5rN8HWM4pdPiP1RAU5s8bFCs5rdlHbHONrfDaeOw/exec';
 const PROMO_URL = 'https://grupollanterama.github.io/PROMOCIONES-DEL-MES/';
 /* Catálogo de artículos promocionales (puntos de EJEMPLO, ajústalos) */
@@ -405,7 +496,7 @@ const ARTICULOS = [
 /* Zonas: orden y vendedores */
 const ZORD = ['TULANCINGO','PACHUCA','POZA RICA','POZA RICA PISO'];
 const ZONAS = {TMG:'TULANCINGO',AML:'TULANCINGO',TER:'PACHUCA',PYM:'POZA RICA',PJV:'POZA RICA',TPS:'POZA RICA PISO',PAL:'POZA RICA PISO',PNA:'POZA RICA PISO',PCA:'POZA RICA PISO'};
-const CORTO = {TMG:'Marco Hernández',TER:'Enrique Reséndiz',AML:'J. Martín López',PYM:'Yuridia Morales',PJV:'Jorge Vicencio',TPS:'C.S. Tuxpan',PAL:'Suc. Álamo',PNA:'Suc. Naranjos',PCA:'Suc. Cerro Azul'};
+const CORTO = {TMG:'Marco Hernández',TER:'Enrique Reséndiz',TEA:'Antonio García',AML:'J. Martín López',PYM:'Yuridia Morales',PJV:'Jorge Vicencio',TPS:'C.S. Tuxpan',PAL:'Suc. Álamo',PNA:'Suc. Naranjos',PCA:'Suc. Cerro Azul'};
 
 let DB = {vendedores:[],clientes:[],movimientos:[],config:{porcentaje:.01,comprasMinCanje:1}};
 const $ = id => document.getElementById(id);
@@ -417,17 +508,23 @@ const r2 = n => Math.round(n*100)/100;
 const U = id => $(id).value.trim().toUpperCase();
 const esc = s => String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const zonaDe = folio => ZONAS[String(folio||'').slice(0,3)] || '';
-const corto = v => v ? (CORTO[v.Prefijo]||v.Vendedor) : '';
+const corto = v => v ? (CORTO[v.Clave]||v.Vendedor) : '';
 const leerPref = k => { try{ return localStorage.getItem(k)||''; }catch(e){ return ''; } };
 const guardarPref = (k,v) => { try{ localStorage.setItem(k,v); }catch(e){} };
 
 /* ---------- NAVEGACIÓN ---------- */
 function irA(t){
-  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
+  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===t||(b.dataset.t==='mas'&&['clientes','movs','admin'].includes(t))));
   document.querySelectorAll('.tab').forEach(s=>s.classList.toggle('on',s.id==='t-'+t));
   window.scrollTo({top:0,behavior:'smooth'});
 }
-$('nav').onclick = e => { const b=e.target.closest('button'); if(b) irA(b.dataset.t); };
+$('nav').onclick = e => { const b=e.target.closest('button'); if(!b) return; b.dataset.t==='mas'?abrirMas():irA(b.dataset.t); };
+function abrirMas(){
+  $('modal-c').innerHTML=`<div class="mhead"><h2 style="margin:0">Más opciones</h2><button class="btn o sm" onclick="cerrarModal()">✕</button></div>
+  <div class="masg">${[['clientes','👥','Clientes','Buscar clientes, saldo e historial'],['movs','📋','Movimientos','Compras y canjes con fecha y hora'],['admin','🔒','Admin','Corregir o anular registros']]
+    .map(([t,i,n,d])=>`<button class="masb" onclick="cerrarModal();irA('${t}')"><b>${i}</b><span><strong>${n}</strong><small>${d}</small></span></button>`).join('')}</div>`;
+  $('modal').classList.add('on');
+}
 function toast(m, err){ const t=$('toast'); t.textContent=m; t.className='toast'+(err?' err':''); t.style.display='block'; clearTimeout(t._t); t._t=setTimeout(()=>t.style.display='none',4000); }
 function okMark(){ const o=$('okmark'); o.classList.remove('on'); void o.offsetWidth; o.classList.add('on'); clearTimeout(o._t); o._t=setTimeout(()=>o.classList.remove('on'),1100); }
 const verA = id => setTimeout(()=>$(id).scrollIntoView({behavior:'smooth',block:'start'}),650);
@@ -537,14 +634,18 @@ function estadoCli(folio){
   };
 }
 const cli = f => DB.clientes.find(c=>c.Folio===String(f||'').trim().toUpperCase());
-const vendDe = pref => DB.vendedores.find(v=>v.Prefijo===pref);
+const vendDe = clave => DB.vendedores.find(v=>v.Clave===clave);
+/* El vendedor de una tarjeta se sabe por su folio: prefijo + rango (ej. TER-001..100 Enrique, TER-101..200 Antonio) */
+function vDe(folio){ const f=String(folio||'').toUpperCase(), pre=f.slice(0,3), n=Number(f.slice(4)); return DB.vendedores.find(v=>v.Prefijo===pre&&n>=v.Desde&&n<=v.Hasta)||null; }
+const claveDe = folio => vDe(folio)?.Clave||'';
+const pad3 = n => String(n).padStart(3,'0');
 const vlist = () => [...DB.vendedores].sort((a,b)=>ZORD.indexOf(a.Zona)-ZORD.indexOf(b.Zona));
 const movDe = id => DB.movimientos.find(m=>m.ID===id);
 
 /* ---------- MENSAJES ---------- */
-function firma(c){ const v=vendDe(c.Prefijo); return v?`\n\nTu asesor: ${v.Asesor}\nCel. ${v.Celular}`:''; }
+function firma(c){ const v=vDe(c.Folio); return v?`\n\nTu asesor: ${v.Asesor}\nCel. ${v.Celular}`:''; }
 function msgBienvenida(c){
-  return `¡Hola ${c.Nombre}! 👋\nBienvenido.\n\nTu tarjeta Cliente Frecuente es la *${c.Folio}*.\nCompra, acumula puntos y canjéalos por artículos promocionales o paga tus próximas compras.\n\nPor cada compra acumulas el 1% en puntos. Por ejemplo $1,000.00 equivalen a 10 puntos que son $10.00.\n\n📲 *Promociones del mes:* escanea el código QR de tu tarjeta o entra aquí para conocer las promociones especiales que obtienes por ser Cliente Frecuente:\n${PROMO_URL}`+firma(c);
+  return `¡Hola ${c.Nombre}! 👋\nBienvenid@.\n\nTu tarjeta Cliente Frecuente es la *${c.Folio}*.\nCompra, acumula puntos y canjéalos por artículos promocionales o paga tus próximas compras.\n\nPor cada compra acumulas el 1% en puntos. Por ejemplo $1,000.00 equivalen a 10 puntos que son $10.00.\n\n📲 *Promociones del mes:* escanea el código QR de tu tarjeta o entra aquí para conocer las promociones especiales que obtienes por ser Cliente Frecuente:\n${PROMO_URL}`+firma(c);
 }
 function msgCompra(c,fac,imp,pts,saldo){
   return `¡Gracias por comprar en *GRUPO LLANTERAMA*! 🛞\n\nTarjeta: ${c.Folio}\nFactura: ${fac}\nImporte: ${money(imp)}\nPuntos ganados: *${num(pts)}*\n\n⭐ Puntos acumulados: *${num(saldo)}*\n\n✅ Puedes usar tus puntos en tu próxima compra o canjearlos por artículos promocionales. ¡Ponte en contacto con tu asesor para hacer uso de ellos!`+firma(c);
@@ -600,7 +701,7 @@ function msgAsesorCanje(c,pts,det,saldo,fecha){
 }
 /* Arma los dos mensajes (cliente y asesor) después de registrar */
 function dosMensajes(p,sec,c,r,msgCli,msgAse){
-  const v=vendDe(c.Prefijo), auto=String(r.wa||'').startsWith('ENVIADO');
+  const v=vDe(c.Folio), auto=String(r.wa||'').startsWith('ENVIADO');
   $(p+'-wa').innerHTML=`<div class="paso">1️⃣ Al cliente · ${esc(c.Nombre)}</div>`+waBox(c.Telefono,msgCli,{estado:r.wa,ref:'MOV',id:r.id,sec,key:'cli'})+
     (v&&v.Celular?`<div class="paso" style="margin-top:18px">2️⃣ Al asesor · ${esc(v.Asesor)}</div>`+waBox(v.Celular,msgAse,{sec,key:'ase',label:'📲 Enviar al asesor',fin:true})
       :`<div class="cli-box lock" style="display:block;margin-top:14px">⚠️ Este vendedor no tiene celular registrado en la hoja Vendedores.</div><div class="wabtns"><button class="btn fin" onclick="finalizar('${sec}')">✔ Finalizar</button></div>`);
@@ -621,52 +722,57 @@ function finalizar(sec){
 
 /* ---------- RENDER ---------- */
 function setOpts(id,html){ const s=$(id), v=s.value; s.innerHTML=html; if([...s.options].some(o=>o.value===v)) s.value=v; }
-const optsVend = z => vlist().filter(v=>!z||v.Zona===z).map(v=>`<option value="${v.Prefijo}">${v.Prefijo} · ${esc(corto(v))}</option>`).join('');
+const optsVend = z => vlist().filter(v=>!z||v.Zona===z).map(v=>`<option value="${v.Clave}">${v.Prefijo} · ${esc(corto(v))}</option>`).join('');
 function cascada(p){ // filtros Zona → Vendedor → Folio
   const z=$(p+'-z').value;
   setOpts(p+'-v','<option value="">TODOS</option>'+optsVend(z));
   const v=$(p+'-v').value;
-  const fol=DB.clientes.filter(c=>(!z||zonaDe(c.Folio)===z)&&(!v||c.Prefijo===v)).map(c=>c.Folio).sort();
+  const fol=DB.clientes.filter(c=>(!z||zonaDe(c.Folio)===z)&&(!v||claveDe(c.Folio)===v)).map(c=>c.Folio).sort();
   setOpts(p+'-f','<option value="">TODOS</option>'+fol.map(f=>`<option>${f}</option>`).join(''));
 }
 function render(){
-  DB.vendedores.forEach(v=>{ v.Zona = ZONAS[v.Prefijo] || String(v.Zona||'').toUpperCase(); });
+  DB.vendedores.forEach(v=>{
+    v.Prefijo=String(v.Prefijo||'').toUpperCase(); v.Clave=String(v.Clave||v.Prefijo).toUpperCase();
+    v.Desde=Number(v.Desde)||1; v.Hasta=Number(v.Hasta)||Number(v.Cantidad)||0; v.Cantidad=v.Hasta-v.Desde+1;
+    v.Zona=ZONAS[v.Prefijo]||String(v.Zona||'').toUpperCase();
+  });
   const a=$('a-vend'), prev=a.value||leerPref('cf-vend');
   a.innerHTML=optsVend(''); if(prev && vendDe(prev)) a.value=prev;
   sugerirFolio();
   resumen(); tablaClientes(); tablaMovs();
-  infoCli('c'); infoCli('k');
+  infoCli('c'); infoCli('k'); infoCli('q'); ctHist();
+  if(!CAT.ok&&!CAT.cargando) cargarCatalogos();
   if($('pick').classList.contains('on')) pkRender();
   if(ADMIN_PIN) adminLista();
 }
 
 /* ---------- RESUMEN ---------- */
 let SEL=null, REP_ROWS=[], CLI_ROWS=[], MOV_ROWS=[];
-function zonaSel(){ const z=$('f-r-z').value; SEL=new Set(DB.vendedores.filter(v=>!z||v.Zona===z).map(v=>v.Prefijo)); resumen(); }
+function zonaSel(){ const z=$('f-r-z').value; SEL=new Set(DB.vendedores.filter(v=>!z||v.Zona===z).map(v=>v.Clave)); resumen(); }
 function toggleV(p,ch){ ch?SEL.add(p):SEL.delete(p); $('f-r-z').value=''; resumen(); }
-function selTodos(b){ SEL=new Set(b?DB.vendedores.map(v=>v.Prefijo):[]); $('f-r-z').value=''; resumen(); }
+function selTodos(b){ SEL=new Set(b?DB.vendedores.map(v=>v.Clave):[]); $('f-r-z').value=''; resumen(); }
 function filtroFecha(m,d,h){ return (!d||m.Fecha>=d)&&(!h||m.Fecha<=h); }
 function resumen(){
-  if(!SEL) SEL=new Set(DB.vendedores.map(v=>v.Prefijo));
+  if(!SEL||(DB.vendedores.length&&!SEL._ok)){ SEL=new Set(DB.vendedores.map(v=>v.Clave)); SEL._ok=DB.vendedores.length>0; }
   const d=$('f-r-d').value,h=$('f-r-h').value;
-  const ms=vigentes().filter(m=>filtroFecha(m,d,h)&&SEL.has(String(m.Folio).slice(0,3)));
+  const ms=vigentes().filter(m=>filtroFecha(m,d,h)&&SEL.has(claveDe(m.Folio)));
   $('vend-sel').innerHTML=ZORD.map(z=>{
     const vs=DB.vendedores.filter(v=>v.Zona===z); if(!vs.length) return '';
     return `<div class="zt">${z}</div>`+vs.map(x=>{
-      const n=DB.clientes.filter(c=>c.Prefijo===x.Prefijo).length, p=Math.min(100,n/x.Cantidad*100), on=SEL.has(x.Prefijo);
-      return `<label class="vs ${on?'':'off'}"><input type="checkbox" ${on?'checked':''} onchange="toggleV('${x.Prefijo}',this.checked)"><div style="flex:1"><div style="display:flex;justify-content:space-between"><span style="white-space:nowrap"><b>${x.Prefijo}</b> ${esc(corto(x))}</span><span>${n}/${x.Cantidad}</span></div><div class="bar" style="margin-top:4px"><i style="width:${p}%"></i></div></div></label>`;
+      const n=DB.clientes.filter(c=>claveDe(c.Folio)===x.Clave).length, p=Math.min(100,n/x.Cantidad*100), on=SEL.has(x.Clave);
+      return `<label class="vs ${on?'':'off'}"><input type="checkbox" ${on?'checked':''} onchange="toggleV('${x.Clave}',this.checked)"><div style="flex:1"><div style="display:flex;justify-content:space-between"><span style="white-space:nowrap"><b>${x.Prefijo}</b> ${esc(corto(x))}</span><span>${n}/${x.Cantidad}</span></div><div class="bar" style="margin-top:4px"><i style="width:${p}%"></i></div></div></label>`;
     }).join('');
   }).join('');
-  REP_ROWS=vlist().filter(v=>SEL.has(v.Prefijo)).map(v=>{
-    const mm=ms.filter(m=>m.Folio.startsWith(v.Prefijo)), c=mm.filter(m=>m.Tipo==='COMPRA'), k=mm.filter(m=>m.Tipo==='CANJE');
-    const tarj=DB.clientes.filter(x=>x.Prefijo===v.Prefijo).length;
+  REP_ROWS=vlist().filter(v=>SEL.has(v.Clave)).map(v=>{
+    const mm=ms.filter(m=>claveDe(m.Folio)===v.Clave), c=mm.filter(m=>m.Tipo==='COMPRA'), k=mm.filter(m=>m.Tipo==='CANJE');
+    const tarj=DB.clientes.filter(x=>claveDe(x.Folio)===v.Clave).length;
     const fac=c.reduce((a,m)=>a+Number(m.Importe),0), em=c.reduce((a,m)=>a+Number(m.Puntos),0), us=-k.reduce((a,m)=>a+Number(m.Puntos),0);
-    return {Prefijo:v.Prefijo,Vendedor:v.Vendedor,Zona:v.Zona,Asignadas:Number(v.Cantidad),Entregadas:tarj,Activos:new Set(c.map(m=>m.Folio)).size,Compras:c.length,Facturacion:fac,Ticket:c.length?fac/c.length:0,Emitidos:r2(em),Canjeados:r2(us),Saldo:r2(em-us)};
+    return {Clave:v.Clave,Prefijo:v.Prefijo,Vendedor:v.Vendedor,Zona:v.Zona,Asignadas:Number(v.Cantidad),Entregadas:tarj,Activos:new Set(c.map(m=>m.Folio)).size,Compras:c.length,Facturacion:fac,Ticket:c.length?fac/c.length:0,Emitidos:r2(em),Canjeados:r2(us),Saldo:r2(em-us)};
   });
   const T=k=>REP_ROWS.reduce((a,r)=>a+r[k],0);
   $('r-kpis').innerHTML=[[T('Entregadas')+' / '+T('Asignadas'),'Tarjetas entregadas'],[T('Activos'),'Clientes con compra'],[T('Compras'),'Compras'],[money(T('Facturacion')),'Facturación con tarjeta'],[money(T('Compras')?T('Facturacion')/T('Compras'):0),'Ticket promedio'],[num(T('Emitidos')),'Puntos emitidos (1%)'],[num(T('Canjeados')),'Puntos canjeados'],[num(T('Saldo')),'Puntos por canjear']].map(([b,s])=>`<div class="kpi"><b>${b}</b><span>${s}</span></div>`).join('');
   $('tb-rep').innerHTML=!REP_ROWS.length?'<tr><td class="muted">Selecciona al menos un vendedor.</td></tr>':'<tr><th>Vendedor</th><th class="n">Tarjetas</th><th class="n">Activos</th><th class="n">Compras</th><th class="n">Facturación</th><th class="n">Ticket</th><th class="n">Pts emit.</th><th class="n">Pts canj.</th><th class="n">Saldo pts</th></tr>'+
-    REP_ROWS.map(r=>`<tr><td><b>${r.Prefijo}</b> ${esc(CORTO[r.Prefijo]||r.Vendedor)}</td><td class="n">${r.Entregadas}/${r.Asignadas} <span class="muted">${(r.Entregadas/r.Asignadas*100).toFixed(0)}%</span></td><td class="n">${r.Activos}</td><td class="n">${r.Compras}</td><td class="n">${money(r.Facturacion)}</td><td class="n">${money(r.Ticket)}</td><td class="n">${num(r.Emitidos)}</td><td class="n">${num(r.Canjeados)}</td><td class="n"><b>${num(r.Saldo)}</b></td></tr>`).join('')+
+    REP_ROWS.map(r=>`<tr class="vrow" onclick="togExp('${r.Clave}')"><td><b>${EXPV.has(r.Clave)?'▾':'▸'} ${r.Prefijo}</b> ${esc(CORTO[r.Clave]||r.Vendedor)}</td><td class="n">${r.Entregadas}/${r.Asignadas} <span class="muted">${(r.Entregadas/r.Asignadas*100).toFixed(0)}%</span></td><td class="n">${r.Activos}</td><td class="n">${r.Compras}</td><td class="n">${money(r.Facturacion)}</td><td class="n">${money(r.Ticket)}</td><td class="n">${num(r.Emitidos)}</td><td class="n">${num(r.Canjeados)}</td><td class="n"><b>${num(r.Saldo)}</b></td></tr>`+(EXPV.has(r.Clave)?`<tr class="exp"><td colspan="9">${detVend(r.Clave)}</td></tr>`:'')).join('')+
     `<tr style="background:#fff8dd;font-weight:700"><td>TOTAL</td><td class="n">${T('Entregadas')}/${T('Asignadas')} <span class="muted">${(T('Entregadas')/T('Asignadas')*100||0).toFixed(0)}%</span></td><td class="n">${T('Activos')}</td><td class="n">${T('Compras')}</td><td class="n">${money(T('Facturacion'))}</td><td class="n">${money(T('Compras')?T('Facturacion')/T('Compras'):0)}</td><td class="n">${num(T('Emitidos'))}</td><td class="n">${num(T('Canjeados'))}</td><td class="n">${num(T('Saldo'))}</td></tr>`;
   const porCli={};
   ms.filter(m=>m.Tipo==='COMPRA').forEach(m=>{(porCli[m.Folio]??={f:m.Folio,n:0,t:0}); porCli[m.Folio].n++; porCli[m.Folio].t+=Number(m.Importe);});
@@ -679,15 +785,31 @@ function resumen(){
   const ult=[...ms].sort((a,b)=>String(b.Fecha).localeCompare(String(a.Fecha))).slice(0,15);
   $('ultimos').innerHTML='<tr><th>Fecha</th><th>Folio</th><th>Cliente</th><th>Tipo</th><th>Factura</th><th class="n">Importe</th><th class="n">Puntos</th></tr>'+(ult.length?ult.map(m=>`<tr class="click" onclick="detalle('${m.Folio}')"><td>${fdate(m.Fecha)}</td><td>${m.Folio}</td><td>${esc(cli(m.Folio)?.Nombre)}</td><td>${pill(m.Tipo)}</td><td>${esc(m['Folio Factura'])}</td><td class="n">${m.Importe?money(m.Importe):''}</td><td class="n" style="color:${m.Puntos<0?'var(--red)':'var(--ok)'}">${num(m.Puntos)}</td></tr>`).join(''):'<tr><td colspan="7" class="muted">Sin movimientos en la selección.</td></tr>');
 }
+/* Resumen: al tocar un vendedor se despliegan sus clientes; al tocar un cliente, sus movimientos */
+const EXPV=new Set(), EXPC=new Set();
+function togExp(clave){ EXPV.has(clave)?EXPV.delete(clave):EXPV.add(clave); resumen(); }
+function togCli(folio){ EXPC.has(folio)?EXPC.delete(folio):EXPC.add(folio); resumen(); }
+function detVend(clave){
+  const L=DB.clientes.filter(c=>claveDe(c.Folio)===clave).sort((a,b)=>a.Folio.localeCompare(b.Folio));
+  if(!L.length) return '<div class="muted" style="padding:6px 2px">Este vendedor aún no tiene clientes registrados.</div>';
+  return `<div class="muted" style="font-weight:700">${L.length} cliente(s) · toca uno para ver sus movimientos</div>`+L.map(c=>{
+    const e=estadoCli(c.Folio), ab=EXPC.has(c.Folio);
+    const ms=ab?DB.movimientos.filter(m=>m.Folio===c.Folio).sort((a,b)=>(String(b.Fecha)+(b.Hora||'')).localeCompare(String(a.Fecha)+(a.Hora||''))):[];
+    return `<div class="dv"><div class="dvh" onclick="event.stopPropagation();togCli('${c.Folio}')"><span>${ab?'▾':'▸'} <b>${c.Folio}</b> · ${esc(c.Nombre)}</span><span class="muted">${e.compras} compra(s) · ${money(e.facturado)} · <b style="color:var(--navy)">${num(e.saldo)} pts</b></span></div>
+    ${ab?`<div class="dvm"><div class="muted">📱 ${c.Telefono} · ${esc(c['Tipo Cliente']||'')} · Alta ${fdate(c['Fecha Alta'])}${medTexto(c)?' · '+medTexto(c):''}</div>
+      ${ms.length?ms.map(m=>`<div class="mv"><span>${fdate(m.Fecha)} ${m.Hora||''} · ${pill(m.Tipo)} ${esc(m['Folio Factura']||m['Artículo']||'')}${m.Importe?' · '+money(m.Importe):''}</span><b style="color:${m.Puntos<0?'var(--red)':'var(--ok)'}">${m.Puntos>0?'+':''}${num(m.Puntos)}</b></div>`).join(''):'<div class="muted" style="padding:6px 0">Sin movimientos todavía.</div>'}
+      <button class="btn o sm" style="margin-top:8px" onclick="event.stopPropagation();detalle('${c.Folio}')">Ver ficha completa</button></div>`:''}</div>`;
+  }).join('');
+}
 const pill=t=>t==='COMPRA'?'<span class="pill p-c">COMPRA</span>':t==='CANJE'?'<span class="pill p-x">CANJE</span>':t==='AJUSTE'?'<span class="pill p-v">REINICIO</span>':'<span class="pill p-a">ANULADO</span>';
 
 /* ---------- ALTA ---------- */
 function sugerirFolio(){
-  const p=$('a-vend').value, v=vendDe(p); if(!v) return;
-  const usados=DB.clientes.filter(c=>c.Prefijo===p).map(c=>+c.Folio.slice(4));
-  const n=(usados.length?Math.max(...usados):0)+1;
-  $('a-folio').value = n<=v.Cantidad ? p+'-'+String(n).padStart(3,'0') : 'SIN TARJETAS';
-  $('a-hint').textContent = `${usados.length} de ${v.Cantidad} tarjetas registradas · ${v.Zona}`;
+  const v=vendDe($('a-vend').value); if(!v) return;
+  const usados=DB.clientes.filter(c=>claveDe(c.Folio)===v.Clave).map(c=>+c.Folio.slice(4));
+  const n=usados.length?Math.max(...usados)+1:v.Desde;
+  $('a-folio').value = n<=v.Hasta ? v.Prefijo+'-'+pad3(n) : 'SIN TARJETAS';
+  $('a-hint').textContent = `${usados.length} de ${v.Cantidad} tarjetas registradas · folios ${v.Prefijo}-${pad3(v.Desde)} a ${v.Prefijo}-${pad3(v.Hasta)} · ${v.Zona}`;
 }
 async function altaCliente(){
   if(pendiente('alta')) return toast('Primero envía o copia el mensaje de bienvenida del cliente anterior',true);
@@ -695,20 +817,236 @@ async function altaCliente(){
   if(!v) return toast('Elige el vendedor',true);
   if(!nombre) return toast('Escribe el nombre del cliente',true);
   if(tel.length!==10) return toast('El teléfono debe tener 10 dígitos',true);
+  const M=MS.a;
+  if(!CAT.ok) return toast('Cargando la lista de medidas… espera un momento',true);
+  if(!M.rin.size) return toast('Elige al menos un RIN que usa el cliente',true);
+  if(!M.med.size) return toast('Elige al menos una MEDIDA que usa el cliente',true);
+  if(!M.mar.size) return toast('Elige al menos una MARCA que usa el cliente',true);
   const ok=await confirmar('¿Registrar esta tarjeta?',
     `<div class="cbig"><div class="y"><small>Folio</small><b>${$('a-folio').value}</b></div><div><small>Tipo</small><b style="font-size:16px">${$('a-tipo').value}</b></div></div>`+
-    crow('Cliente',esc(nombre))+crow('Teléfono',tel)+crow('Vendedor',esc(corto(v)))+crow('Zona',v.Zona)+crow('Fecha',fdate($('a-fecha').value)));
+    crow('Cliente',esc(nombre))+crow('Teléfono',tel)+crow('Vendedor',esc(corto(v)))+crow('Zona',v.Zona)+crow('Fecha',fdate($('a-fecha').value))+
+    crow('Rin',[...M.rin].join(', '))+crow('Medidas',[...M.med].join(', '))+crow('Marca',[...M.mar].join(', ')));
   if(!ok) return;
-  const r=await post({action:'registrarCliente',usuario:v.Vendedor,prefijo:v.Prefijo,nombre,telefono:tel,fecha:$('a-fecha').value,
-    tipoCliente:$('a-tipo').value,unidades:$('a-unid').value,notas:U('a-notas')},$('b-alta'));
+  const r=await post({action:'registrarCliente',usuario:v.Vendedor,clave:v.Clave,prefijo:v.Prefijo,nombre,telefono:tel,fecha:$('a-fecha').value,
+    tipoCliente:$('a-tipo').value,unidades:$('a-unid').value,rines:[...M.rin],medidas:[...M.med],marcas:[...M.mar]},$('b-alta'));
   if(!r) return;
   const c=cli(r.folio);
   $('a-wa').innerHTML=waBox(c.Telefono,msgBienvenida(c),{estado:r.wa,ref:'CLI',id:c.Folio,sec:'alta',key:'cli',fin:true});
   $('a-msgcard').style.display='block';
   bloquear('alta',String(r.wa||'').startsWith('ENVIADO')?[]:['cli']);
-  ['a-nombre','a-tel','a-unid','a-notas'].forEach(i=>$(i).value='');
+  ['a-nombre','a-tel','a-unid'].forEach(i=>$(i).value=''); medLimpiar('a');
   verA('a-msgcard');
 }
+
+/* ---------- CATÁLOGOS (MEDIDAS · LLANTASCF · LISTADEPRECIOSCF) ---------- */
+const CAT={ok:false,cargando:false,medidas:[],llantas:[],lista:[],marcas:['CHINA','COOPER','GOODYEAR']};
+async function cargarCatalogos(){
+  if(CAT.cargando) return; CAT.cargando=true;
+  try{
+    const r=await llamar(API_URL+'?action=catalogos',{},40000);
+    if(!r.ok) throw new Error(r.error);
+    Object.assign(CAT,{ok:true,medidas:r.medidas||[],llantas:r.llantas||[],lista:r.lista||[],marcas:r.marcas||CAT.marcas});
+    medRender('a'); precios(); ctRender(); ctBuscar();
+  }catch(e){ if(!CAT.ok) setTimeout(cargarCatalogos,8000); }
+  finally{ CAT.cargando=false; }
+}
+const CATS = () => ['LLANTAS',...new Set(CAT.lista.map(r=>r[0]).filter(Boolean))];
+function prItems(cat){
+  return cat==='LLANTAS' ? CAT.llantas.map((r,i)=>({cat,i,marca:r[0],desc:r[1],ex:[r[2],r[3],r[4]],precio:r[5]}))
+                         : CAT.lista.map((r,i)=>({cat:r[0],i,desc:r[1],precio:r[2]})).filter(x=>x.cat===cat);
+}
+function prodDe(cat,i){ const x=cat==='LLANTAS'?CAT.llantas[i]:CAT.lista[i]; return x?(cat==='LLANTAS'?{cat,desc:x[1],precio:x[5],marca:x[0]}:{cat,desc:x[1],precio:x[2]}):null; }
+function coincide(texto,q){
+  if(!q) return true;
+  const T=texto.toUpperCase(), TN=T.replace(/\s/g,''), qn=q.replace(/\s/g,'');
+  return TN.includes(qn) || q.split(/\s+/).every(t=>T.includes(t)||TN.includes(t));
+}
+const exisTxt = ex => ['Tulancingo','Poza Rica','Hidalguense'].map((n,k)=>{ const v=ex[k]; const si=v!==''&&Number(v)>0; return `<span class="${si?'si':''}">${n}: ${v===''||v==null?'—':num(v).replace('.00','')}</span>`; }).join('');
+
+/* ---------- LISTA DE PRECIOS ---------- */
+const PR={cat:'LLANTAS',marca:''};
+function prCat(c){ PR.cat=c; PR.marca=''; precios(); }
+function prMarca(m){ PR.marca=PR.marca===m?'':m; precios(); }
+function precios(){
+  if(!$('pr-list')) return;
+  if(!CAT.ok){ $('pr-list').innerHTML='<div class="nores">⏳ Cargando lista de precios…</div>'; return; }
+  $('pr-cat').innerHTML=CATS().map(c=>`<button class="chip ${PR.cat===c?'on':''}" onclick="prCat('${c}')">${esc(c)}</button>`).join('');
+  const marcas=PR.cat==='LLANTAS'?[...new Set(CAT.llantas.map(r=>r[0]).filter(Boolean))].sort():[];
+  $('pr-marca').innerHTML=marcas.length?`<button class="chip ${!PR.marca?'on':''}" onclick="prMarca('')">TODAS LAS MARCAS</button>`+marcas.map(m=>`<button class="chip ${PR.marca===m?'on':''}" onclick="prMarca('${m}')">${esc(m)}</button>`).join(''):'';
+  const q=U('pr-q');
+  const L=prItems(PR.cat).filter(x=>(!PR.marca||x.marca===PR.marca)&&coincide(x.desc+' '+(x.marca||''),q));
+  $('pr-n').textContent=L.length+' producto(s)'+(L.length>100?' · mostrando 100, escribe para filtrar':'');
+  $('pr-list').innerHTML=L.length?L.slice(0,100).map(x=>`<div class="prod"><div class="pd"><b>${esc(x.desc)}</b>${x.marca?`<span class="muted">${esc(x.marca)}</span>`:''}${x.ex?`<div class="exis">${exisTxt(x.ex)}</div>`:''}</div>
+    <div class="pp"><div class="pr">${x.precio>0?money(x.precio):'<span class="muted">Sin precio</span>'}</div>${x.precio>0?`<button class="btn sm" onclick="ctAgregar('${x.cat}',${x.i})">+ Cotizar</button>`:''}</div></div>`).join('')
+    :'<div class="nores">No hay productos con esa búsqueda.</div>';
+}
+
+/* ---------- COTIZADOR ---------- */
+let COT={cat:'LLANTAS',partidas:[]};
+try{ const g=JSON.parse(localStorage.getItem('cf-cot')||'null'); if(g&&Array.isArray(g.partidas)) COT.partidas=g.partidas; }catch(e){}
+const ctGuardar = () => { try{ localStorage.setItem('cf-cot',JSON.stringify({partidas:COT.partidas})); }catch(e){} };
+function ctCatSel(c){ COT.cat=c; ctBuscar(); }
+function ctBuscar(){
+  if(!$('ct-res')) return;
+  $('ct-cat').innerHTML=CAT.ok?CATS().map(c=>`<button class="chip ${COT.cat===c?'on':''}" onclick="ctCatSel('${c}')">${esc(c)}</button>`).join(''):'';
+  const q=U('ct-q'), box=$('ct-res');
+  if(!CAT.ok){ box.innerHTML='<div class="nores">⏳ Cargando lista de precios…</div>'; return; }
+  if(q.length<2){ box.innerHTML='<div class="muted" style="margin-top:6px">Escribe al menos 2 letras o números.</div>'; return; }
+  const L=prItems(COT.cat).filter(x=>x.precio>0&&coincide(x.desc+' '+(x.marca||''),q)).slice(0,12);
+  box.innerHTML=L.length?L.map(x=>`<div class="sug" onclick="ctAgregar('${x.cat}',${x.i})"><div><b>${esc(x.desc)}</b>${x.marca?`<div class="muted">${esc(x.marca)}</div>`:''}${x.ex?`<div class="exis">${exisTxt(x.ex)}</div>`:''}</div><div class="pt">${money(x.precio)}<div class="muted">+ agregar</div></div></div>`).join('')
+    :`<div class="nores">No hay productos con «${esc(q)}» en ${esc(COT.cat)}.</div>`;
+}
+function ctAgregar(cat,i){
+  const p=prodDe(cat,i); if(!p||!(p.precio>0)) return;
+  const ya=COT.partidas.find(x=>x.cat===p.cat&&x.desc===p.desc);
+  if(ya) ya.cant++; else COT.partidas.push({cat:p.cat,desc:p.desc,precio:p.precio,cant:1});
+  ctGuardar(); ctRender(); $('ct-out').innerHTML='';
+  toast('✓ Agregado: '+p.desc+' · '+COT.partidas.length+' partida(s)');
+}
+function ctCant(i,d){ const x=COT.partidas[i]; if(!x) return; x.cant=Math.max(1,(Number(x.cant)||1)+d); ctGuardar(); ctRender(); }
+function ctCantSet(i,v){ const x=COT.partidas[i]; if(!x) return; x.cant=Math.max(1,Math.floor(Number(v))||1); ctGuardar(); ctRender(); }
+function ctQuitar(i){ COT.partidas.splice(i,1); ctGuardar(); ctRender(); }
+async function ctVaciar(){
+  if(COT.partidas.length && !(await confirmar('¿Vaciar la cotización?','<p>Se quitarán todas las partidas.</p>','🗑 Vaciar','Cancelar'))) return;
+  COT.partidas=[]; ctGuardar(); ctRender(); $('ct-out').innerHTML='';
+}
+function ctRender(){
+  if(!$('ct-part')) return;
+  if(CAT.ok) COT.partidas.forEach(x=>{ const it=prItems(x.cat).find(y=>y.desc===x.desc); x.falta=!it; if(it) x.precio=it.precio; });   // precio siempre el vigente
+  const tot=COT.partidas.reduce((a,x)=>a+x.precio*x.cant,0);
+  $('ct-part').innerHTML=COT.partidas.length?COT.partidas.map((x,i)=>`<div class="part"><div class="pd"><b>${esc(x.desc)}</b><span class="muted">${esc(x.cat)} · ${money(x.precio)} c/u${x.falta?' · <b style="color:var(--red)">ya no está en la lista</b>':''}</span></div>
+    <div class="qty"><button onclick="ctCant(${i},-1)">−</button><input type="number" inputmode="numeric" min="1" value="${x.cant}" onchange="ctCantSet(${i},this.value)"><button onclick="ctCant(${i},1)">+</button></div>
+    <div class="imp">${money(x.precio*x.cant)}</div><button class="del" title="Quitar" onclick="ctQuitar(${i})">🗑</button></div>`).join('')
+    :'<div class="muted" style="padding:10px 0">Aún no hay partidas. Busca un producto y tócalo para agregarlo.</div>';
+  $('ct-total').textContent=money(tot);
+}
+let ULT_PDF=null;
+async function generarCot(){
+  const c=cli($('q-folio').value);
+  if(!c) return toast('Primero elige al cliente (paso 1)',true);
+  if(!COT.partidas.length) return toast('Agrega al menos un producto',true);
+  if(COT.partidas.some(x=>x.falta)) return toast('Quita las partidas que ya no están en la lista de precios',true);
+  const tot=COT.partidas.reduce((a,x)=>a+x.precio*x.cant,0), pzs=COT.partidas.reduce((a,x)=>a+Number(x.cant),0);
+  const ok=await confirmar('¿Generar esta cotización?',
+    `<div class="cbig"><div class="y"><small>Total (IVA incluido)</small><b>${money(tot)}</b></div><div><small>Partidas</small><b>${COT.partidas.length}</b></div></div>`+
+    crow('Cliente',`${c.Folio} · ${esc(c.Nombre)}`)+crow('Piezas',pzs)+crow('Asesor',esc(corto(vDe(c.Folio)))),'✅ Generar','✏️ Editar');
+  if(!ok) return;
+  const r=await post({action:'guardarCotizacion',usuario:vDe(c.Folio)?.Vendedor||'',folio:c.Folio,partidas:COT.partidas.map(x=>({cat:x.cat,desc:x.desc,cant:x.cant}))},$('b-cot'));
+  if(!r) return;
+  const cot={folio:r.cot.folio,fecha:hoy(),hora:new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}),tarjeta:c.Folio,cliente:c.Nombre,partidas:r.cot.partidas,total:r.cot.total};
+  $('ct-out').innerHTML='<div class="nores" style="margin-top:12px">⏳ Generando PDF…</div>';
+  try{
+    ULT_PDF=await crearPdfCot(cot);
+    $('ct-out').innerHTML=`<div class="okline" style="margin-top:14px">✅ Cotización ${cot.folio} guardada</div>${botonesPdf()}
+      <div class="wabtns"><button class="btn o" onclick="ctNueva()">➕ Nueva cotización</button></div>`;
+    COT.partidas=[]; ctGuardar(); ctRender();
+    verA('ct-out');
+  }catch(e){ $('ct-out').innerHTML=`<div class="cli-box lock" style="display:block">La cotización ${cot.folio} se guardó, pero no se pudo crear el PDF (${esc(e.message)}). Revisa tu conexión y ábrela desde "Cotizaciones registradas".</div>`; }
+}
+const botonesPdf = () => `<div class="wabtns"><button class="btn g" onclick="compartirPdf()">📤 Enviar PDF por WhatsApp</button><button class="btn o" onclick="descargarPdf()">⬇ Descargar PDF</button></div>
+  <div class="muted" style="margin-top:6px">En el celular, "Enviar" abre el menú para compartir: elige <b>WhatsApp</b> y el contacto del encargado.</div>`;
+function ctNueva(){ $('ct-out').innerHTML=''; limpiarSel('q'); $('ct-q').value=''; ctBuscar(); window.scrollTo({top:0,behavior:'smooth'}); }
+async function compartirPdf(){
+  if(!ULT_PDF) return;
+  const f=new File([ULT_PDF.blob],ULT_PDF.nombre,{type:'application/pdf'});
+  try{
+    if(navigator.canShare&&navigator.canShare({files:[f]})){ await navigator.share({files:[f],title:ULT_PDF.nombre,text:ULT_PDF.texto}); return; }
+  }catch(e){ if(e.name==='AbortError') return; }
+  descargarPdf(); toast('Se descargó el PDF. Ábrelo y compártelo por WhatsApp.');
+}
+function descargarPdf(){
+  if(!ULT_PDF) return;
+  const a=document.createElement('a'); a.href=URL.createObjectURL(ULT_PDF.blob); a.download=ULT_PDF.nombre; document.body.appendChild(a); a.click(); a.remove();
+}
+/* PDF de la cotización */
+let PDF_LIB=null;
+function cargarScript(src){ return new Promise((ok,no)=>{ const s=document.createElement('script'); s.src=src; s.onload=ok; s.onerror=()=>no(new Error('sin conexión para crear el PDF')); document.head.appendChild(s); }); }
+async function libPdf(){
+  if(!PDF_LIB) PDF_LIB=(async()=>{
+    await cargarScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+    await cargarScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js');
+  })().catch(e=>{ PDF_LIB=null; throw e; });
+  return PDF_LIB;
+}
+async function crearPdfCot(cot){
+  await libPdf();
+  const {jsPDF}=window.jspdf, doc=new jsPDF({unit:'mm',format:'letter'});
+  const W=215.9, c=cli(cot.tarjeta)||{}, v=vDe(cot.tarjeta);
+  const NAVY=[31,47,107], YEL=[255,194,14], GRIS=[107,115,137];
+  doc.setFillColor(...NAVY); doc.rect(0,0,W,30,'F');
+  doc.setFillColor(...YEL); doc.rect(0,30,W,1.6,'F');
+  doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(17); doc.text('GRUPO LLANTERAMA',14,14);
+  doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.text('Programa Cliente Frecuente',14,21);
+  doc.setFont('helvetica','bold'); doc.setFontSize(15); doc.text('COTIZACIÓN',W-14,14,{align:'right'});
+  doc.setTextColor(...YEL); doc.setFontSize(12); doc.text(cot.folio,W-14,21,{align:'right'});
+  const fila=(x,y,et,val)=>{ doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(...GRIS); doc.text(et,x,y); doc.setFont('helvetica','bold'); doc.setFontSize(10.5); doc.setTextColor(27,34,54); doc.text(String(val||'—'),x,y+5); };
+  doc.setDrawColor(227,231,240); doc.setFillColor(246,248,253); doc.roundedRect(14,38,W-28,30,2,2,'FD');
+  fila(19,45,'CLIENTE',cot.cliente); fila(19,58,'TARJETA CLIENTE FRECUENTE',cot.tarjeta); fila(85,58,'TELÉFONO',c.Telefono);
+  fila(140,45,'FECHA',fdate(cot.fecha)+(cot.hora?'  '+cot.hora:'')); fila(140,58,'ASESOR',v?(v.Asesor+(v.Celular?'  ·  '+v.Celular:'')):'');
+  doc.autoTable({startY:76,margin:{left:14,right:14},
+    head:[['Cant.','Descripción','Precio unitario','Importe']],
+    body:cot.partidas.map(p=>[String(p.cant),p.desc+(p.cat&&p.cat!=='LLANTAS'?'  ('+p.cat+')':''),money(p.precio),money(p.importe!=null?p.importe:p.precio*p.cant)]),
+    styles:{font:'helvetica',fontSize:9.5,cellPadding:3,textColor:[27,34,54],lineColor:[227,231,240],lineWidth:.2},
+    headStyles:{fillColor:NAVY,textColor:255,fontStyle:'bold'},
+    alternateRowStyles:{fillColor:[248,249,253]},
+    columnStyles:{0:{halign:'center',cellWidth:16},2:{halign:'right',cellWidth:34},3:{halign:'right',cellWidth:34,fontStyle:'bold'}}});
+  let y=doc.lastAutoTable.finalY+6;
+  if(y>245){ doc.addPage(); y=20; }
+  doc.setFillColor(255,248,221); doc.setDrawColor(...YEL); doc.roundedRect(W-14-84,y,84,16,2,2,'FD');
+  doc.setTextColor(...GRIS); doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.text('TOTAL (IVA incluido)',W-14-80,y+6.5);
+  doc.setTextColor(...NAVY); doc.setFont('helvetica','bold'); doc.setFontSize(15); doc.text(money(cot.total),W-18,y+11.5,{align:'right'});
+  doc.setTextColor(...GRIS); doc.setFont('helvetica','normal'); doc.setFontSize(8.5);
+  doc.text(`${cot.partidas.length} partida(s) · ${cot.partidas.reduce((a,p)=>a+Number(p.cant),0)} pieza(s)`,14,y+6.5);
+  doc.text('Precios especiales para clientes con tarjeta Cliente Frecuente.',14,y+11.5);
+  const n=doc.getNumberOfPages();
+  for(let i=1;i<=n;i++){ doc.setPage(i); doc.setFontSize(8); doc.setTextColor(...GRIS); doc.text(`Grupo Llanterama · ${cot.folio} · Página ${i} de ${n}`,W/2,272,{align:'center'}); }
+  const nombre=`${cot.folio}_${String(cot.cliente).replace(/[^A-Z0-9Ñ]+/gi,'_').slice(0,30)}.pdf`;
+  return {blob:doc.output('blob'),nombre,texto:`Cotización ${cot.folio} · ${cot.cliente} (${cot.tarjeta}) · Total ${money(cot.total)}`};
+}
+function ctHist(){
+  if(!$('ct-hist')) return;
+  const q=U('ch-q');
+  const L=[...(DB.cotizaciones||[])].reverse().filter(x=>!q||[x.folio,x.cliente,x.tarjeta,x.vendedor].join(' ').toUpperCase().includes(q)).slice(0,60);
+  $('ct-hist').innerHTML=L.length?L.map(x=>`<div class="hitem"><div><b>${esc(x.folio)}</b> · ${esc(x.cliente)} <span class="muted">(${esc(x.tarjeta)})</span><div class="muted">${fdate(x.fecha)} ${x.hora||''} · ${esc(x.vendedor||'')} · ${x.partidas.length} partida(s)</div></div>
+    <div style="text-align:right;flex-shrink:0"><b style="color:var(--navy)">${money(x.total)}</b><br><button class="btn o sm" style="margin-top:4px" onclick="pdfHist('${esc(x.folio)}',this)">📄 PDF</button></div></div>`).join('')
+    :'<div class="muted">Aún no hay cotizaciones registradas.</div>';
+}
+async function pdfHist(folio,btn){
+  const x=(DB.cotizaciones||[]).find(c=>c.folio===folio); if(!x) return;
+  btn.disabled=true; btn.textContent='⏳';
+  try{
+    ULT_PDF=await crearPdfCot(x);
+    $('modal-c').innerHTML=`<div class="mhead"><h2 style="margin:0">${esc(x.folio)} · ${esc(x.cliente)}</h2><button class="btn o sm" onclick="cerrarModal()">✕</button></div>
+      <div class="cli-box">Total: <b>${money(x.total)}</b> · ${x.partidas.length} partida(s) · ${fdate(x.fecha)}</div>${botonesPdf()}`;
+    $('modal').classList.add('on');
+  }catch(e){ toast('No se pudo crear el PDF: '+e.message,true); }
+  finally{ btn.disabled=false; btn.textContent='📄 PDF'; }
+}
+
+/* ---------- RIN · MEDIDAS · MARCA (alta y corrección en Admin) ---------- */
+const MS={a:{rin:new Set(),med:new Set(),mar:new Set()},e:{rin:new Set(),med:new Set(),mar:new Set()}};
+const rinesCat = () => [...new Set(CAT.medidas.map(x=>x[1]))];
+const medidasDe = rines => CAT.medidas.filter(x=>rines.has(x[1])).map(x=>x[0]+' '+x[1]);
+function medRender(p){
+  const M=MS[p]; if(!$(p+'-rin')) return;
+  if(!CAT.ok){ $(p+'-rin').innerHTML='<span class="muted">⏳ Cargando lista de medidas…</span>'; $(p+'-med').innerHTML=''; $(p+'-mar').innerHTML=''; return; }
+  const ch=(tipo,val)=>`<button type="button" class="chip ${M[tipo].has(val)?'on':''}" onclick="medToggle('${p}','${tipo}','${val.replace(/'/g,"\\'")}')">${M[tipo].has(val)?'✓ ':''}${esc(val)}</button>`;
+  $(p+'-rin').innerHTML=rinesCat().map(r=>ch('rin',r)).join('')||'<span class="muted">La hoja MEDIDAS está vacía.</span>';
+  const meds=medidasDe(M.rin);
+  $(p+'-med').innerHTML=M.rin.size?meds.map(m=>ch('med',m)).join(''):'<span class="muted">Primero elige el rin.</span>';
+  $(p+'-mar').innerHTML=CAT.marcas.map(m=>ch('mar',m)).join('');
+}
+function medToggle(p,tipo,val){
+  const S=MS[p][tipo]; S.has(val)?S.delete(val):S.add(val);
+  if(tipo==='rin'){ const ok=new Set(medidasDe(MS[p].rin)); [...MS[p].med].forEach(m=>{ if(!ok.has(m)) MS[p].med.delete(m); }); }
+  medRender(p);
+}
+function medLimpiar(p){ MS[p]={rin:new Set(),med:new Set(),mar:new Set()}; medRender(p); }
+function medCargar(p,c){
+  const L=x=>String(x||'').split(',').map(t=>t.trim()).filter(Boolean);
+  MS[p]={rin:new Set(L(c.Rines)),med:new Set(L(c.Medidas)),mar:new Set(L(c.Marcas))}; medRender(p);
+}
+const medTexto = c => [c.Rines,c.Medidas,c.Marcas].filter(Boolean).length?`🛞 ${esc(c.Medidas||c.Rines||'')}${c.Marcas?' · '+esc(c.Marcas):''}`:'';
 
 /* ---------- SELECTOR DE CLIENTE ---------- */
 const PK={dest:'c',z:'',v:''};
@@ -722,13 +1060,13 @@ function pkVend(v){ PK.v=v; guardarPref('cf-pk-v',v); pkRender(); }
 function pkRender(){
   $('pk-z').innerHTML=['',...ZORD].map(z=>`<button class="chip ${PK.z===z?'on':''}" onclick="pkZona('${z}')">${z||'TODAS'}</button>`).join('');
   const vs=vlist().filter(v=>!PK.z||v.Zona===PK.z);
-  if(PK.v && !vs.some(v=>v.Prefijo===PK.v)) PK.v='';
-  $('pk-v').innerHTML=`<button class="chip ${!PK.v?'on':''}" onclick="pkVend('')">TODOS</button>`+vs.map(v=>`<button class="chip ${PK.v===v.Prefijo?'on':''}" onclick="pkVend('${v.Prefijo}')">${v.Prefijo} · ${esc(corto(v))}</button>`).join('');
+  if(PK.v && !vs.some(v=>v.Clave===PK.v)) PK.v='';
+  $('pk-v').innerHTML=`<button class="chip ${!PK.v?'on':''}" onclick="pkVend('')">TODOS</button>`+vs.map(v=>`<button class="chip ${PK.v===v.Clave?'on':''}" onclick="pkVend('${v.Clave}')">${v.Prefijo} · ${esc(corto(v))}</button>`).join('');
   const q=U('pk-q');
-  const L=DB.clientes.filter(c=>(!PK.z||zonaDe(c.Folio)===PK.z)&&(!PK.v||c.Prefijo===PK.v)&&(!q||[c.Folio,c.Nombre,c.Telefono].join(' ').toUpperCase().includes(q)))
+  const L=DB.clientes.filter(c=>(!PK.z||zonaDe(c.Folio)===PK.z)&&(!PK.v||claveDe(c.Folio)===PK.v)&&(!q||[c.Folio,c.Nombre,c.Telefono].join(' ').toUpperCase().includes(q)))
     .sort((a,b)=>a.Folio.localeCompare(b.Folio));
   $('pk-n').textContent=L.length+' cliente(s)';
-  $('pk-list').innerHTML=L.length?L.map(c=>`<div class="pitem" onclick="elegir('${c.Folio}')"><div><b>${c.Folio}</b><div>${esc(c.Nombre)}</div><span class="muted">${c.Telefono} · ${esc(corto(vendDe(c.Prefijo)))}</span></div><div class="pt"><b>${num(estadoCli(c.Folio).saldo)}</b><span class="muted">puntos</span></div></div>`).join('')
+  $('pk-list').innerHTML=L.length?L.map(c=>`<div class="pitem" onclick="elegir('${c.Folio}')"><div><b>${c.Folio}</b><div>${esc(c.Nombre)}</div><span class="muted">${c.Telefono} · ${esc(corto(vDe(c.Folio)))}</span></div><div class="pt"><b>${num(estadoCli(c.Folio).saldo)}</b><span class="muted">puntos</span></div></div>`).join('')
     :'<div class="muted" style="padding:20px;text-align:center">No hay clientes con ese filtro.</div>';
 }
 function elegir(folio){ cerrarPicker(); selCli(PK.dest,folio); }
@@ -745,7 +1083,7 @@ function buscarCli(p){
   if(q.length<2){ box.innerHTML='<div class="muted" style="margin-top:6px">Sigue escribiendo…</div>'; return; }
   const qs=q.replace(/\s+/g,' '), qf=q.replace(/\s/g,'');
   const L=DB.clientes.filter(c=>c.Folio.replace('-','').includes(qf.replace('-',''))||String(c.Nombre).toUpperCase().includes(qs)||String(c.Telefono).includes(qf)).slice(0,8);
-  box.innerHTML=L.length?L.map(c=>`<div class="sug" onclick="selCli('${p}','${c.Folio}')"><div><b>${c.Folio}</b> · ${esc(c.Nombre)}<div class="muted">${c.Telefono} · ${esc(corto(vendDe(c.Prefijo)))}</div></div><div class="pt">${num(estadoCli(c.Folio).saldo)}<div class="muted">pts</div></div></div>`).join('')
+  box.innerHTML=L.length?L.map(c=>`<div class="sug" onclick="selCli('${p}','${c.Folio}')"><div><b>${c.Folio}</b> · ${esc(c.Nombre)}<div class="muted">${c.Telefono} · ${esc(corto(vDe(c.Folio)))}</div></div><div class="pt">${num(estadoCli(c.Folio).saldo)}<div class="muted">pts</div></div></div>`).join('')
     :`<div class="nores">No se encontró ningún cliente con «${esc(q)}». Revisa el folio de la tarjeta o busca por nombre.</div>`;
 }
 function infoCli(p){
@@ -754,7 +1092,7 @@ function infoCli(p){
   const e=estadoCli(c.Folio), puede=e.compras>=DB.config.comprasMinCanje;
   const ms=vigentes().filter(m=>m.Folio===c.Folio).sort((a,b)=>String(b.Fecha).localeCompare(String(a.Fecha))).slice(0,5);
   box.innerHTML=`<div class="selcli"><div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
-    <div><div class="muted">${c.Folio} · ${zonaDe(c.Folio)}</div><div class="nm">${esc(c.Nombre)}</div><div class="muted">📱 ${c.Telefono} · ${esc(c['Tipo Cliente']||'')} · ${esc(corto(vendDe(c.Prefijo)))}</div></div>
+    <div><div class="muted">${c.Folio} · ${zonaDe(c.Folio)}</div><div class="nm">${esc(c.Nombre)}</div><div class="muted">📱 ${c.Telefono} · ${esc(c['Tipo Cliente']||'')} · ${esc(corto(vDe(c.Folio)))}</div>${medTexto(c)?`<div class="muted">${medTexto(c)}</div>`:''}</div>
     <button class="btn o sm" onclick="limpiarSel('${p}')">✕ Cambiar</button></div>
     <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:10px"><div class="muted">Compras: <b>${e.compras}</b> · Facturado: <b>${money(e.facturado)}</b></div><div style="text-align:right"><div class="muted">Saldo</div><div class="sal">${num(e.saldo)} <span style="font-size:13px">pts</span></div></div></div>
     ${ms.length?`<div class="hist"><div class="muted" style="font-weight:700">Últimos movimientos</div>${ms.map(m=>`<div><span>${fdate(m.Fecha)} · ${m.Tipo==='COMPRA'?'Compra '+esc(m['Folio Factura']):m.Tipo==='CANJE'?'Canje':'Reinicio'}</span><b style="color:${m.Puntos<0?'var(--red)':'var(--ok)'}">${m.Puntos>0?'+':''}${num(m.Puntos)}</b></div>`).join('')}</div>`:'<div class="muted" style="margin-top:8px">Sin compras todavía.</div>'}
@@ -812,18 +1150,18 @@ function tablaClientes(){
   cascada('f-cli');
   const q=U('f-cli'), z=$('f-cli-z').value, v=$('f-cli-v').value, f=$('f-cli-f').value, e=$('f-cli-e').value;
   CLI_ROWS=DB.clientes.map(c=>({...c,Zona:zonaDe(c.Folio),...estadoCli(c.Folio)})).filter(c=>
-    (!z||c.Zona===z)&&(!v||c.Prefijo===v)&&(!f||c.Folio===f)&&(!q||[c.Folio,c.Nombre,c.Telefono].join(' ').toUpperCase().includes(q))&&
+    (!z||c.Zona===z)&&(!v||claveDe(c.Folio)===v)&&(!f||c.Folio===f)&&(!q||[c.Folio,c.Nombre,c.Telefono].join(' ').toUpperCase().includes(q))&&
     (!e||(e==='sin'&&!c.compras)||(e==='act'&&c.compras)||(e==='saldo'&&c.saldo>0))).sort((a,b)=>a.Folio.localeCompare(b.Folio));
   $('cli-n').textContent=CLI_ROWS.length+' cliente(s) · toca uno para ver su historial';
   $('tb-cli').innerHTML='<tr><th>Folio</th><th>Cliente</th><th>Teléfono</th><th>Tipo</th><th>Zona</th><th>Vendedor</th><th>Alta</th><th class="n">Compras</th><th class="n">Facturado</th><th class="n">Ganados</th><th class="n">Usados</th><th class="n">Saldo</th><th>Última compra</th></tr>'+
-  CLI_ROWS.map(c=>`<tr class="click" onclick="detalle('${c.Folio}')"><td><b>${c.Folio}</b></td><td>${esc(c.Nombre)}</td><td>${c.Telefono}</td><td>${esc(c['Tipo Cliente'])}</td><td>${c.Zona}</td><td>${esc(corto(vendDe(c.Prefijo)))}</td><td>${fdate(c['Fecha Alta'])}</td><td class="n">${c.compras}</td><td class="n">${money(c.facturado)}</td><td class="n">${num(c.ganados)}</td><td class="n">${num(c.usados)}</td><td class="n"><b>${num(c.saldo)}</b></td><td>${fdate(c.ultima)}</td></tr>`).join('');
+  CLI_ROWS.map(c=>`<tr class="click" onclick="detalle('${c.Folio}')"><td><b>${c.Folio}</b></td><td>${esc(c.Nombre)}</td><td>${c.Telefono}</td><td>${esc(c['Tipo Cliente'])}</td><td>${c.Zona}</td><td>${esc(corto(vDe(c.Folio)))}</td><td>${fdate(c['Fecha Alta'])}</td><td class="n">${c.compras}</td><td class="n">${money(c.facturado)}</td><td class="n">${num(c.ganados)}</td><td class="n">${num(c.usados)}</td><td class="n"><b>${num(c.saldo)}</b></td><td>${fdate(c.ultima)}</td></tr>`).join('');
 }
 
 /* ---------- MOVIMIENTOS ---------- */
 function tablaMovs(){
   cascada('f-m');
   const d=$('f-m-d').value,h=$('f-m-h').value,t=$('f-m-t').value,z=$('f-m-z').value,v=$('f-m-v').value,f=$('f-m-f').value;
-  MOV_ROWS=[...DB.movimientos].reverse().filter(m=>filtroFecha(m,d,h)&&(!t||m.Tipo.startsWith(t))&&(!z||zonaDe(m.Folio)===z)&&(!v||m.Folio.startsWith(v))&&(!f||m.Folio===f))
+  MOV_ROWS=[...DB.movimientos].reverse().filter(m=>filtroFecha(m,d,h)&&(!t||m.Tipo.startsWith(t))&&(!z||zonaDe(m.Folio)===z)&&(!v||claveDe(m.Folio)===v)&&(!f||m.Folio===f))
     .map(m=>({...m,Cliente:cli(m.Folio)?.Nombre||'',Zona:zonaDe(m.Folio)}));
   $('mov-n').textContent=MOV_ROWS.length+' movimiento(s)';
   $('tb-movs').innerHTML='<tr><th>Fecha</th><th>Hora</th><th>Folio</th><th>Cliente</th><th>Zona</th><th>Tipo</th><th>Factura</th><th class="n">Importe</th><th class="n">Puntos</th><th>Uso</th><th>Artículo</th><th>Registró</th><th>WhatsApp</th></tr>'+
@@ -833,11 +1171,11 @@ function tablaMovs(){
 /* ---------- DETALLE DE CLIENTE (solo consulta) ---------- */
 function detalle(folio){
   const c=cli(folio); if(!c) return;
-  const e=estadoCli(folio), v=vendDe(c.Prefijo);
+  const e=estadoCli(folio), v=vDe(c.Folio);
   const ms=DB.movimientos.filter(m=>m.Folio===folio).sort((a,b)=>(String(a.Fecha)+(a.Hora||'')).localeCompare(String(b.Fecha)+(b.Hora||'')));
   let s=0;
   $('modal-c').innerHTML=`<div class="mhead"><h2 style="margin:0">${c.Folio} · ${esc(c.Nombre)}</h2><button class="btn o sm" onclick="cerrarModal()">✕</button></div>
-  <div class="cli-box">📱 ${c.Telefono} · ${esc(c['Tipo Cliente']||'')} · ${c.Unidades||'?'} unidades<br>Alta: ${fdate(c['Fecha Alta'])} · ${esc(corto(v))} · ${zonaDe(c.Folio)}</div>
+  <div class="cli-box">📱 ${c.Telefono} · ${esc(c['Tipo Cliente']||'')} · ${c.Unidades||'?'} unidades<br>Alta: ${fdate(c['Fecha Alta'])} · ${esc(corto(v))} · ${zonaDe(c.Folio)}${medTexto(c)?'<br>'+medTexto(c):''}</div>
   ${c.Notas?`<div class="muted" style="margin-top:6px">📝 ${esc(c.Notas)}</div>`:''}
   <div class="kpis" style="margin-top:14px">${[[e.compras,'Compras'],[money(e.facturado),'Facturado'],[num(e.ganados),'Pts ganados'],[num(e.usados),'Pts usados'],[num(e.saldo),'Saldo']].map(([b,x])=>`<div class="kpi"><b>${b}</b><span>${x}</span></div>`).join('')}</div>
   <div class="tw"><table><tr><th>Fecha</th><th>Hora</th><th>Tipo</th><th>Factura</th><th class="n">Importe</th><th class="n">Puntos</th><th>Detalle</th><th class="n">Saldo</th></tr>
@@ -864,7 +1202,7 @@ function adminLista(){
   const q=U('adm-q'); let html='';
   if(ADM.tab==='cli'){
     const L=DB.clientes.filter(c=>!q||[c.Folio,c.Nombre,c.Telefono].join(' ').toUpperCase().includes(q)).sort((a,b)=>b.Folio.localeCompare(a.Folio)).slice(0,150);
-    html=L.map(c=>`<div class="aitem"><div><b>${c.Folio}</b> · ${esc(c.Nombre)}<div class="muted">${c.Telefono} · ${esc(c['Tipo Cliente']||'')} · ${esc(corto(vendDe(c.Prefijo)))} · Alta ${fdate(c['Fecha Alta'])}</div></div><div class="acts"><button class="btn sm" onclick="admEditCli('${c.Folio}')">✏️ Editar</button></div></div>`).join('');
+    html=L.map(c=>`<div class="aitem"><div><b>${c.Folio}</b> · ${esc(c.Nombre)}<div class="muted">${c.Telefono} · ${esc(c['Tipo Cliente']||'')} · ${esc(corto(vDe(c.Folio)))} · Alta ${fdate(c['Fecha Alta'])}</div></div><div class="acts"><button class="btn sm" onclick="admEditCli('${c.Folio}')">✏️ Editar</button></div></div>`).join('');
   }else{
     const T=ADM.tab==='com'?'COMPRA':'CANJE';
     const L=[...DB.movimientos].reverse().filter(m=>m.Tipo===T||m.Tipo==='ANULADO-'+T)
@@ -877,7 +1215,7 @@ function adminLista(){
   $('adm-list').innerHTML=html||'<div class="muted" style="padding:20px;text-align:center">Sin registros.</div>';
 }
 function admResultado(c,msg){
-  const v=vendDe(c.Prefijo);
+  const v=vDe(c.Folio);
   $('modal-c').innerHTML=`<div class="okline">✅ Cambio guardado</div><h2>Mensaje actualizado para el cliente</h2>
   <p class="muted">Envíalo al asesor <b>${esc(v?.Asesor||'')}</b> (${v?.Celular||''}) para que se lo reenvíe a <b>${esc(c.Nombre)}</b> · ${c.Telefono}.</p>
   ${waBox(v?.Celular||c.Telefono,msg,{sec:'admin',label:'📲 Enviar al asesor',fin:true})}`;
@@ -891,21 +1229,26 @@ function admEditCli(folio){
   <div class="row"><div><label>Teléfono</label><input id="e-tel" type="tel" inputmode="numeric" maxlength="10" value="${c.Telefono}"></div>
   <div><label>No. de unidades</label><input id="e-unid" type="number" inputmode="numeric" value="${esc(c.Unidades||'')}"></div></div>
   <label>Tipo de cliente</label><select id="e-tipo">${tipos.map(t=>`<option ${String(c['Tipo Cliente']).toUpperCase()===t?'selected':''}>${t}</option>`).join('')}</select>
+  <div class="medbox"><div class="medt">🛞 Llantas que utiliza</div>
+    <label>Rin</label><div class="chipsel" id="e-rin"></div><label>Medidas</label><div class="chipsel" id="e-med"></div><label>Marca</label><div class="chipsel" id="e-mar"></div></div>
   <label class="vs" style="margin-top:12px;padding:10px;border:1px solid var(--line)"><input type="checkbox" id="e-reset"><div><b>Es otra persona: reiniciar puntos a 0</b><div class="muted">Solo si la tarjeta pasa a un nuevo titular. El saldo actual (${num(e.saldo)} pts) queda registrado como REINICIO.</div></div></label>
   <br><button class="btn" style="width:100%" onclick="admGuardarCli('${folio}',this)">Guardar cambios</button>`;
+  medCargar('e',c);
   $('modal').classList.add('on');
 }
 async function admGuardarCli(folio,btn){
   const a=cli(folio), nom=U('e-nom'), tel=$('e-tel').value.replace(/\D/g,''), tipo=$('e-tipo').value, unid=$('e-unid').value;
   if(!nom) return toast('Escribe el nombre',true);
   if(tel.length!==10) return toast('El teléfono debe tener 10 dígitos',true);
+  const M=MS.e;
+  if(!M.rin.size||!M.med.size||!M.mar.size) return toast('Rin, medidas y marca no pueden quedar vacíos',true);
   const cambia=nom!==String(a.Nombre).toUpperCase()||tel!==String(a.Telefono), reset=cambia&&$('e-reset').checked;
   const ok=await confirmar('¿Guardar la corrección?',
     crow('Folio',folio)+crow('Nombre',(cambia&&nom!==String(a.Nombre).toUpperCase()?`<s class="muted">${esc(a.Nombre)}</s><br>`:'')+esc(nom))+
-    crow('Teléfono',(tel!==String(a.Telefono)?`<s class="muted">${a.Telefono}</s><br>`:'')+tel)+crow('Tipo',tipo)+crow('Unidades',unid||'—')+
+    crow('Teléfono',(tel!==String(a.Telefono)?`<s class="muted">${a.Telefono}</s><br>`:'')+tel)+crow('Tipo',tipo)+crow('Unidades',unid||'—')+crow('Medidas',[...M.med].join(', '))+crow('Marca',[...M.mar].join(', '))+
     (reset?`<div class="cli-box lock" style="display:block">⚠️ Los puntos se reiniciarán a 0.</div>`:''),'✅ Guardar','✏️ Editar');
   if(!ok) return;
-  const r=await post({action:'actualizarCliente',pin:ADMIN_PIN,folio,nombre:nom,telefono:tel,tipoCliente:tipo,unidades:unid,reiniciar:reset},btn);
+  const r=await post({action:'actualizarCliente',pin:ADMIN_PIN,folio,nombre:nom,telefono:tel,tipoCliente:tipo,unidades:unid,rines:[...M.rin],medidas:[...M.med],marcas:[...M.mar],reiniciar:reset},btn);
   if(r) admResultado(cli(folio),'✏️ *MENSAJE CORREGIDO*\n\n'+msgBienvenida(cli(folio)));
 }
 function admEditMov(id){
@@ -1005,7 +1348,7 @@ window.addEventListener('beforeunload',e=>{ if(pendiente('alta')||pendiente('com
 ['a-fecha','c-fecha','k-fecha'].forEach(i=>$(i).value=hoy());
 document.querySelectorAll('.zsel').forEach(s=>s.innerHTML='<option value="">TODAS</option>'+ZORD.map(z=>`<option>${z}</option>`).join(''));
 $('k-art').innerHTML=ARTICULOS.map(a=>`<option value="${a.nombre}">${a.nombre}${a.puntos?' · '+a.puntos+' pts':''}</option>`).join('');
-adminUI();
+adminUI(); medRender('a'); precios(); ctRender(); ctBuscar();
 cargar();
 </script>
 </body>
