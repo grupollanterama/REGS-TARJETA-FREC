@@ -230,6 +230,18 @@ body:has(#t-clientes.on) main{max-width:none}
   .part{position:relative;padding-right:30px}
 }
 @media(max-width:600px){.row{grid-template-columns:1fr}}
+/* ---- carga de inventario ---- */
+.invcols{display:grid;gap:10px;margin-top:6px}
+.invcols.c2{grid-template-columns:2fr 1fr}.invcols.c4{grid-template-columns:1fr 2.4fr 1fr 1fr}
+@media(max-width:700px){.invcols.c4{grid-template-columns:1fr 1fr}}
+.invcols label{margin:0 0 4px}
+.invcols textarea{height:300px;white-space:pre;overflow:auto;font:13px/1.5 ui-monospace,Menlo,Consolas,monospace;resize:vertical;text-transform:uppercase}
+.invcols small{display:block;margin-top:3px;color:var(--mut);font-size:11px;font-weight:600}
+.invcols small.mal{color:var(--red)}
+.invpaso{background:#f6f8fd;border-radius:10px;padding:10px 12px;margin:10px 0;font-size:13px;line-height:1.55}
+.invres{border-radius:10px;padding:12px;margin-top:10px;line-height:1.5;font-size:13px}
+.invres.ok{background:#dcfce7;color:#14532d}.invres.mal{background:#fde2e2;color:#7f1d1d}.invres.av{background:#fff3cd;color:#6b4e00}
+.invtab{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}.invtab td,.invtab th{padding:6px 8px;border-bottom:1px solid var(--line)}
 </style>
 </head>
 <body>
@@ -249,6 +261,7 @@ body:has(#t-clientes.on) main{max-width:none}
   <button data-t="cot"><b>🧾</b><span>Cotizar</span></button>
   <button data-t="clientes" class="navx"><b>👥</b><span>Clientes</span></button>
   <button data-t="movs" class="navx"><b>📋</b><span>Movs.</span></button>
+  <button data-t="inv" class="navx"><b>📦</b><span>Inventario</span></button>
   <button data-t="admin" class="navx"><b>🔒</b><span>Admin</span></button>
   <button data-t="mas" class="navmas"><b>☰</b><span>Más</span></button>
 </nav>
@@ -442,6 +455,21 @@ body:has(#t-clientes.on) main{max-width:none}
   </div>
 </section>
 
+<!-- CARGAR INVENTARIO -->
+<section class="tab" id="t-inv">
+  <div class="card" id="inv-lock" style="max-width:420px;margin:0 auto">
+    <h2>📦 Cargar inventario</h2>
+    <p class="muted">Para Ericka (lista y precios), Alejandra (Pachuca) y Yuridia (Poza Rica y Tuxpan).</p>
+    <label>Tu PIN</label><input type="password" inputmode="numeric" id="inv-pin" autocomplete="off" onkeyup="if(event.key==='Enter')invEntrar()">
+    <br><br><button class="btn" style="width:100%" id="b-inv-in" onclick="invEntrar()">Entrar</button>
+  </div>
+  <div class="card" id="inv-in" style="display:none">
+    <div class="mhead"><h2 style="margin:0" id="inv-hola">📦 Cargar inventario</h2><button class="btn o sm" onclick="invSalir()">Salir</button></div>
+    <label>¿Qué vas a cargar?</label><div class="chiprow" id="inv-dest"></div>
+    <div id="inv-form"></div>
+  </div>
+</section>
+
 <!-- ADMIN -->
 <section class="tab" id="t-admin">
   <div class="card" id="adm-lock" style="max-width:420px;margin:0 auto">
@@ -482,7 +510,7 @@ body:has(#t-clientes.on) main{max-width:none}
 
 <script>
 /* ====== CONFIGURACIÓN ====== */
-const APP_VER = '2026-11-09-1300';   // cambia en cada actualización
+const APP_VER = '2026-11-09-1500';   // cambia en cada actualización
 const API_URL = 'https://script.google.com/macros/s/AKfycbwDeFwj4W8EBWeZP0o-IVuiTODuGP5rN8HWM4pdPiP1RAU5s8bFCs5rdlHbHONrfDaeOw/exec';
 const PROMO_URL = 'https://grupollanterama.github.io/PROMOCIONES-DEL-MES/';
 /* Catálogo de artículos promocionales (puntos de EJEMPLO, ajústalos) */
@@ -514,14 +542,14 @@ const guardarPref = (k,v) => { try{ localStorage.setItem(k,v); }catch(e){} };
 
 /* ---------- NAVEGACIÓN ---------- */
 function irA(t){
-  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===t||(b.dataset.t==='mas'&&['clientes','movs','admin'].includes(t))));
+  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===t||(b.dataset.t==='mas'&&['clientes','movs','admin','inv'].includes(t))));
   document.querySelectorAll('.tab').forEach(s=>s.classList.toggle('on',s.id==='t-'+t));
   window.scrollTo({top:0,behavior:'smooth'});
 }
 $('nav').onclick = e => { const b=e.target.closest('button'); if(!b) return; b.dataset.t==='mas'?abrirMas():irA(b.dataset.t); };
 function abrirMas(){
   $('modal-c').innerHTML=`<div class="mhead"><h2 style="margin:0">Más opciones</h2><button class="btn o sm" onclick="cerrarModal()">✕</button></div>
-  <div class="masg">${[['clientes','👥','Clientes','Buscar clientes, saldo e historial'],['movs','📋','Movimientos','Compras y canjes con fecha y hora'],['admin','🔒','Admin','Corregir o anular registros']]
+  <div class="masg">${[['clientes','👥','Clientes','Buscar clientes, saldo e historial'],['movs','📋','Movimientos','Compras y canjes con fecha y hora'],['inv','📦','Cargar inventario','Lista de Ericka y existencias de sucursales'],['admin','🔒','Admin','Corregir o anular registros']]
     .map(([t,i,n,d])=>`<button class="masb" onclick="cerrarModal();irA('${t}')"><b>${i}</b><span><strong>${n}</strong><small>${d}</small></span></button>`).join('')}</div>`;
   $('modal').classList.add('on');
 }
@@ -886,7 +914,7 @@ function coincide(texto,q){
   const T=texto.toUpperCase(), TN=T.replace(/\s/g,''), qn=q.replace(/\s/g,'');
   return TN.includes(qn) || q.split(/\s+/).every(t=>T.includes(t)||TN.includes(t));
 }
-const exisTxt = ex => ['Tulancingo','Poza Rica','Hidalguense','Tuxpan'].map((n,k)=>{ const v=ex[k]; const si=v!==''&&Number(v)>0; return `<span class="${si?'si':''}">${n}: ${v===''||v==null?'—':num(v).replace('.00','')}</span>`; }).join('');
+const exisTxt = ex => ['Tulancingo','Poza Rica','Pachuca','Tuxpan'].map((n,k)=>{ const v=ex[k]; const si=v!==''&&Number(v)>0; return `<span class="${si?'si':''}">${n}: ${v===''||v==null?'—':num(v).replace('.00','')}</span>`; }).join('');
 
 /* ---------- LISTA DE PRECIOS ---------- */
 const PR={cat:'LLANTAS',marca:''};
@@ -1213,6 +1241,145 @@ function detalle(folio){
 /* ---------- ADMIN ---------- */
 let ADMIN_PIN=null; try{ ADMIN_PIN=sessionStorage.getItem('cf-admin'); }catch(e){}
 const ADM={tab:'cli'};
+/* ---------- CARGAR INVENTARIO (Ericka · Alejandra · Yuridia) ---------- */
+const INVC={
+  LISTA:{cols:[['marca','Marca',0],['desc','Descripción',1],['tul','Existencia Tulancingo',2],['precio','Precio Cliente Frecuente',2]],clase:'c4',
+    ayuda:'Esta es <b>la lista que manda</b>: solo las llantas que pegues aquí se muestran en la app, con su precio. Copia desde tu Excel cada columna completa (de la primera llanta a la última) y pégala en su cuadro. <b>Reemplaza la lista anterior</b> (se guarda un respaldo).'},
+  TIENDA:{cols:[['desc','Descripción',1],['exis','Existencia',2]],clase:'c2',
+    ayuda:'Copia desde tu Excel la columna de <b>descripción</b> completa (de la primera llanta a la última) y pégala en el cuadro de la izquierda. Luego copia la columna de <b>existencia</b> (los mismos renglones) y pégala en el de la derecha. <b>Reemplaza tu inventario anterior.</b>'}
+};
+let INV={pin:null,nombre:'',destinos:[],sel:null,ult:null};
+try{ INV.pin=sessionStorage.getItem('cf-inv')||null; }catch(e){}
+const invCfg = id => id==='LISTA'?INVC.LISTA:INVC.TIENDA;
+async function invApi(data,ms){
+  if(!navigator.onLine){ const e=new Error('No hay internet en este momento.'); e.red=true; throw e; }
+  const r=await llamar(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({...data,reqId:nuevoId()})},ms||40000);
+  if(!r.ok){ const e=new Error(r.error); e.ocupado=!!r.ocupado; throw e; }
+  return r;
+}
+async function invEntrar(pinGuardado){
+  const pin=pinGuardado||$('inv-pin').value.trim(); if(!pin) return;
+  const b=$('b-inv-in'); b.disabled=true;
+  try{
+    const r=await invApi({action:'invAcceso',pin});
+    Object.assign(INV,{pin,nombre:r.nombre,destinos:r.destinos});
+    try{ sessionStorage.setItem('cf-inv',pin); }catch(e){}
+    if(!INV.destinos.some(d=>d.id===INV.sel)) INV.sel=INV.destinos[0]?.id||null;
+    $('inv-pin').value=''; invUI(); if(!pinGuardado) okMark();
+  }catch(e){ if(!pinGuardado) toast(e.message,true); else { INV.pin=null; invUI(); } }
+  finally{ b.disabled=false; }
+}
+function invSalir(){ INV={pin:null,nombre:'',destinos:[],sel:null}; try{ sessionStorage.removeItem('cf-inv'); }catch(e){} invUI(); }
+function invUI(){
+  const dentro=!!(INV.pin&&INV.nombre);
+  $('inv-lock').style.display=dentro?'none':'block'; $('inv-in').style.display=dentro?'block':'none';
+  if(!dentro) return;
+  $('inv-hola').textContent='📦 Hola, '+INV.nombre;
+  $('inv-dest').innerHTML=INV.destinos.map(d=>`<button class="chip ${INV.sel===d.id?'on':''}" onclick="invSel('${d.id}')">${esc(d.nombre)}</button>`).join('');
+  invForm();
+}
+function invSel(id){ INV.sel=id; invUI(); }
+function invForm(){
+  const d=INV.destinos.find(x=>x.id===INV.sel); if(!d){ $('inv-form').innerHTML=''; return; }
+  const c=invCfg(d.id);
+  $('inv-form').innerHTML=`
+    <div class="invpaso">${c.ayuda}<br><span class="muted">${d.ultima?`Última carga: <b>${esc(d.ultima.fecha)}</b> por ${esc(d.ultima.quien)} · ${d.ultima.filas} llantas`:'Aún no hay cargas desde la app'} · Ahora hay ${d.actuales} renglones.</span></div>
+    <div class="invcols ${c.clase}">${c.cols.map(([k,t])=>`<div><label>${t}</label><textarea id="inv-${k}" spellcheck="false" placeholder="Pega aquí la columna ${t}" oninput="invCuenta()" onpaste="invPegar(event,'${k}')" onscroll="invScroll(this)"></textarea><small id="inv-n-${k}">0 renglones</small></div>`).join('')}</div>
+    <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap"><button class="btn y" id="b-inv-rev" onclick="invRevisar()" style="flex:1">🔍 Revisar antes de enviar</button><button class="btn o" onclick="invLimpiar()">Limpiar</button></div>
+    <div id="inv-out"></div>`;
+}
+/* Si pegan varias columnas juntas (con tabulador) en un cuadro, se reparten solas en los cuadros siguientes */
+function invPegar(ev,k){
+  const txt=(ev.clipboardData||window.clipboardData)?.getData('text')||'';
+  if(!txt.includes('\t')) return;
+  const c=invCfg(INV.sel), keys=c.cols.map(x=>x[0]), i0=keys.indexOf(k);
+  const lineas=invLineas(txt), ncols=Math.max(...lineas.map(l=>l.split('\t').length));
+  if(ncols<2) return;
+  ev.preventDefault();
+  for(let j=0;j<ncols&&i0+j<keys.length;j++) $('inv-'+keys[i0+j]).value=lineas.map(l=>(l.split('\t')[j]||'').trim()).join('\n');
+  invCuenta(); toast('Se repartieron '+Math.min(ncols,keys.length-i0)+' columnas en sus cuadros');
+}
+function invScroll(t){ document.querySelectorAll('.invcols textarea').forEach(o=>{ if(o!==t) o.scrollTop=t.scrollTop; }); }
+function invLineas(txt){
+  const L=String(txt||'').replace(/\r/g,'').split('\n');
+  while(L.length&&!L[L.length-1].trim()) L.pop();          // Excel deja un salto de línea al final
+  return L.map(l=>{ l=l.trim(); if(/^".*"$/.test(l)) l=l.slice(1,-1).replace(/""/g,'"'); return l; });
+}
+function invCuenta(){
+  const c=invCfg(INV.sel), ns=c.cols.map(([k])=>invLineas($('inv-'+k).value).length), mx=Math.max(...ns);
+  c.cols.forEach(([k],i)=>{ const e=$('inv-n-'+k); e.textContent=ns[i]+' renglones'+(ns[i]&&ns[i]!==mx?' ⚠️ no coincide':''); e.className=ns[i]&&ns[i]!==mx?'mal':''; });
+  $('inv-out').innerHTML='';
+}
+function invLimpiar(){ invCfg(INV.sel).cols.forEach(([k])=>$('inv-'+k).value=''); invCuenta(); }
+const invNum = s => { s=String(s||'').replace(/[$\s,]/g,''); if(s==='') return ''; const n=Number(s); return isFinite(n)?n:NaN; };
+/* Arma y valida los renglones. tipo: 0 texto · 1 descripción (obligatoria) · 2 número */
+function invArmar(){
+  const c=invCfg(INV.sel), cols=c.cols.map(([k])=>invLineas($('inv-'+k).value));
+  const ns=cols.map(x=>x.length), n=Math.max(...ns), err=[], filas=[];
+  const iDesc=c.cols.findIndex(x=>x[2]===1);
+  if(!n) return {err:['Pega primero la información en los cuadros.']};
+  c.cols.forEach(([k,t,tipo],i)=>{ if(tipo===1&&!ns[i]) err.push('Falta pegar la columna «'+t+'».'); });
+  c.cols.forEach(([k,t],i)=>{ if(ns[i]&&ns[i]!==n) err.push(`La columna «${t}» tiene ${ns[i]} renglones y debería tener ${n}. Copia todas las columnas desde la misma primera llanta hasta la misma última.`); });
+  if(err.length) return {err};
+  // ¿Copiaron también el encabezado? (descripción tipo «DESCRIPCION» y número que no es número)
+  let ini=0; const numIdx=c.cols.map((x,i)=>x[2]===2?i:-1).filter(i=>i>=0);
+  if(/^DESCRIPCI/i.test(cols[iDesc][0]||'')||numIdx.some(i=>cols[i][0]&&isNaN(invNum(cols[i][0])))) ini=1;
+  const malos=[];
+  for(let r=ini;r<n;r++){
+    const fila=c.cols.map(([k,t,tipo],i)=>{ const v=cols[i][r]??''; return tipo===2?invNum(v):v.toUpperCase().replace(/\s+/g,' ').trim(); });
+    if(!fila[iDesc]){ if(fila.some(v=>v!==''&&v!==0)) malos.push(`Renglón ${r+1}: tiene datos pero no tiene descripción`); continue; }
+    c.cols.forEach(([k,t,tipo],i)=>{ if(tipo===2&&Number.isNaN(fila[i])) malos.push(`Renglón ${r+1} (${fila[iDesc]}): «${cols[i][r]}» no es un número en ${t}`); });
+    filas.push(fila);
+  }
+  if(malos.length) return {err:malos.slice(0,8).concat(malos.length>8?['… y '+(malos.length-8)+' más']:[])};
+  return {filas,encabezado:ini===1,iDesc};
+}
+function invRevisar(){
+  const a=invArmar(), out=$('inv-out');
+  if(a.err){ out.innerHTML=`<div class="invres mal"><b>Hay que corregir antes de enviar:</b><br>${a.err.map(esc).join('<br>')}</div>`; return; }
+  const c=invCfg(INV.sel), L=a.filas;
+  const piezas=L.reduce((s,f)=>s+(Number(f[INV.sel==='LISTA'?2:1])||0),0);
+  const extra=INV.sel==='LISTA'?` · <b>${L.filter(f=>f[3]>0).length}</b> con precio · ${L.filter(f=>!(f[3]>0)).length} sin precio`:'';
+  const muestra=[...L.slice(0,5),...(L.length>8?[null]:[]),...L.slice(Math.max(5,L.length-3))];
+  out.innerHTML=`<div class="invres ok"><b>${L.length} llantas</b> · ${num(piezas).replace('.00','')} piezas${extra}${a.encabezado?'<br>Se brincó el primer renglón porque parece encabezado.':''}</div>
+    <table class="invtab"><tr>${c.cols.map(x=>`<th>${x[1]}</th>`).join('')}</tr>${muestra.map(f=>f?`<tr>${f.map((v,i)=>`<td>${c.cols[i][2]===2?(v===''?'—':num(v).replace('.00','')):esc(v)}</td>`).join('')}</tr>`:`<tr><td colspan="${c.cols.length}" class="muted">… ${L.length-8} más …</td></tr>`).join('')}</table>
+    <p class="muted" style="margin-top:6px">Revisa que el primero y el último renglón tengan su descripción con la existencia correcta.</p>
+    <button class="btn ok" id="b-inv-env" style="width:100%;margin-top:10px" onclick="invEnviar()">✅ Enviar ${L.length} llantas</button>`;
+}
+async function invEnviar(confirmado){
+  const a=invArmar(); if(a.err) return invRevisar();
+  const d=INV.destinos.find(x=>x.id===INV.sel);
+  if(!confirmado&&!(await confirmar('¿Enviar inventario?',crow('Destino',esc(d.nombre))+crow('Llantas',a.filas.length)+`<p class="muted" style="margin-top:8px">Va a <b>reemplazar</b> ${INV.sel==='LISTA'?'la lista anterior (se guarda un respaldo)':'el inventario anterior de '+esc(d.nombre)}.</p>`,'✅ Enviar','Cancelar'))) return;
+  const b=$('b-inv-env'); if(b) b.disabled=true;
+  $('saving-t').textContent='Enviando y conciliando…'; $('saving').classList.add('on');
+  try{
+    const r=await invApi({action:'subirInventario',pin:INV.pin,destino:INV.sel,filas:a.filas,confirmado:!!confirmado},120000);
+    $('saving').classList.remove('on');
+    if(r.necesitaConfirmar){
+      const si=await confirmar('⚠️ Llegaron menos llantas',`<p style="line-height:1.5">Antes había <b>${r.antes}</b> renglones y ahora vienen <b>${r.ahora}</b>. ¿Seguro que copiaste todo?</p>`,'Sí, enviar así','Revisar');
+      if(si) return invEnviar(true); return;
+    }
+    okMark();
+    await invEntrar(INV.pin);   // refresca «última carga» y deja los cuadros vacíos
+    invResultado(r); $('inv-out').scrollIntoView({behavior:'smooth',block:'start'});
+    setTimeout(()=>{ CAT.cargando=false; cargarCatalogos(); },300);
+  }catch(e){
+    $('saving').classList.remove('on');
+    $('inv-out').innerHTML=`<div class="invres mal"><b>No se pudo enviar:</b> ${esc(e.message)}<br>${e.red||e.ocupado?'Toca enviar otra vez; no se duplica, solo reemplaza.':''}</div><button class="btn ok" style="width:100%;margin-top:10px" id="b-inv-env" onclick="invEnviar(${!!confirmado})">🔄 Enviar otra vez</button>`;
+  }finally{ if(b) b.disabled=false; }
+}
+function invResultado(r){
+  let h=`<div class="invres ok"><b>✅ ${esc(r.mensaje)}</b> · ${num(r.piezas).replace('.00','')} piezas`;
+  if(r.destino==='LISTA') h+=`<br>${r.conPrecio} con precio · ${r.sinPrecio} sin precio<br><span style="font-size:12px">Existencias de sucursales conciliadas: ${r.resumen.map(esc).join(' · ')}</span></div>`;
+  else{
+    const dt=r.detalle||{cuenta:{},revisar:[],nRevisar:0}, k=dt.cuenta||{};
+    h+=`<br>${(k.EXACTO||0)+(k.PROBABLE||0)} encontradas en la lista de Ericka · ${k['NO ESTÁ EN LISTA CF']||0} no están en la lista (no se muestran: camión, otras marcas…)</div>`;
+    if(dt.nRevisar) h+=`<div class="invres av"><b>${dt.nRevisar} descripciones para revisar</b> (no coinciden igualito con la lista de Ericka):
+      <table class="invtab"><tr><th>Tu descripción</th><th>Exist.</th><th>Resultado</th></tr>${dt.revisar.map(x=>`<tr><td>${esc(x.desc)}</td><td>${x.exis}</td><td>${x.res==='PROBABLE'?'Se puso en: '+esc(x.cf):x.res==='DUDA'?'<b>No se puso</b>: '+esc(x.nota):'<b>No se puso</b>: '+esc(x.nota)}</td></tr>`).join('')}</table></div>`;
+  }
+  $('inv-out').innerHTML=h;
+}
+
 async function entrarAdmin(){
   const pin=$('adm-pin').value; if(!pin) return;
   $('b-adm').disabled=true;
@@ -1373,7 +1540,7 @@ window.addEventListener('beforeunload',e=>{ if(pendiente('alta')||pendiente('com
 ['a-fecha','c-fecha','k-fecha'].forEach(i=>$(i).value=hoy());
 document.querySelectorAll('.zsel').forEach(s=>s.innerHTML='<option value="">TODAS</option>'+ZORD.map(z=>`<option>${z}</option>`).join(''));
 $('k-art').innerHTML=ARTICULOS.map(a=>`<option value="${a.nombre}">${a.nombre}${a.puntos?' · '+a.puntos+' pts':''}</option>`).join('');
-adminUI(); medRender('a'); precios(); ctRender(); ctBuscar();
+adminUI(); invUI(); if(INV.pin) invEntrar(INV.pin); medRender('a'); precios(); ctRender(); ctBuscar();
 restaurarPendMsg();
 cargar();
 </script>
