@@ -482,7 +482,7 @@ body:has(#t-clientes.on) main{max-width:none}
 
 <script>
 /* ====== CONFIGURACIÓN ====== */
-const APP_VER = '2026-11-07-1800';   // cambia en cada actualización
+const APP_VER = '2026-11-09-1000';   // cambia en cada actualización
 const API_URL = 'https://script.google.com/macros/s/AKfycbwDeFwj4W8EBWeZP0o-IVuiTODuGP5rN8HWM4pdPiP1RAU5s8bFCs5rdlHbHONrfDaeOw/exec';
 const PROMO_URL = 'https://grupollanterama.github.io/PROMOCIONES-DEL-MES/';
 /* Catálogo de artículos promocionales (puntos de EJEMPLO, ajústalos) */
@@ -673,7 +673,7 @@ function waBox(tel,msg,o={}){
   return `${auto?'<div class="cli-box" style="background:#dcfce7;color:#166534;font-weight:700">✅ WhatsApp enviado automáticamente al cliente</div>':''}
   <div class="wa">${esc(msg)}</div>
   <div class="wabtns">
-    ${auto?'':`<a class="btn g" href="${url}" target="_blank" onclick="waHecho(${a},this)">${o.label||'📲 Enviar por WhatsApp'}</a>
+    ${auto?'':`<a class="btn g" href="${url}" target="_blank" onclick="waHecho(${a},this)">${o.hecho?'✅ Enviado · volver a enviar':(o.label||'📲 Enviar por WhatsApp')}</a>
     <button class="btn o" onclick="copiarMsg(${k},${a},this)">📋 Copiar mensaje</button>`}
     ${o.fin?`<button class="btn fin" onclick="finalizar('${o.sec}')">✔ Finalizar</button>`:''}
   </div>`;
@@ -686,6 +686,7 @@ async function copiarMsg(k,ref,id,sec,key,btn){
 function waHecho(ref,id,sec,key,el){
   if(el) setTimeout(()=>{ el.textContent='✅ Enviado'; },300);
   if(ref&&id) api({action:'marcarWA',tipo:ref,id,reqId:nuevoId()}).then(r=>{ DB=r; render(); }).catch(()=>{});
+  const S=leerPendMsg(); if(S&&S.sec===sec&&key){ S.done[key]=true; guardarPendMsg(S); }
   if(LOCKS[sec]){
     if(key) PEND[sec][key]=false; else PEND[sec]={};
     if(!pendiente(sec)){ $(LOCKS[sec][0]).disabled=false; $(LOCKS[sec][1]).style.display='none'; }
@@ -701,12 +702,36 @@ function msgAsesorCanje(c,pts,det,saldo,fecha){
 }
 /* Arma los dos mensajes (cliente y asesor) después de registrar */
 function dosMensajes(p,sec,c,r,msgCli,msgAse){
-  const v=vDe(c.Folio), auto=String(r.wa||'').startsWith('ENVIADO');
-  $(p+'-wa').innerHTML=`<div class="paso">1️⃣ Al cliente · ${esc(c.Nombre)}</div>`+waBox(c.Telefono,msgCli,{estado:r.wa,ref:'MOV',id:r.id,sec,key:'cli'})+
-    (v&&v.Celular?`<div class="paso" style="margin-top:18px">2️⃣ Al asesor · ${esc(v.Asesor)}</div>`+waBox(v.Celular,msgAse,{sec,key:'ase',label:'📲 Enviar al asesor',fin:true})
-      :`<div class="cli-box lock" style="display:block;margin-top:14px">⚠️ Este vendedor no tiene celular registrado en la hoja Vendedores.</div><div class="wabtns"><button class="btn fin" onclick="finalizar('${sec}')">✔ Finalizar</button></div>`);
+  const v=vDe(c.Folio);
+  const S={sec,p,t:Date.now(),done:{},
+    cli:{nombre:c.Nombre,tel:c.Telefono,msg:msgCli,ref:'MOV',id:r.id,estado:r.wa},
+    ase:v&&v.Celular?{nombre:v.Asesor,cel:v.Celular,msg:msgAse}:null, sinAse:!(v&&v.Celular)};
+  guardarPendMsg(S); pintarMsgs(S);
+}
+/* Mensajes pendientes: se recuerdan en el celular para que, si el teléfono recarga la página
+   al regresar de WhatsApp, la plataforma vuelva sola a esta pantalla con lo que falta enviar. */
+const PMK='cf-pendmsg';
+function leerPendMsg(){ try{ return JSON.parse(localStorage.getItem(PMK)||'null'); }catch(e){ return null; } }
+function guardarPendMsg(S){ try{ localStorage.setItem(PMK,JSON.stringify(S)); }catch(e){} }
+function borrarPendMsg(){ try{ localStorage.removeItem(PMK); }catch(e){} }
+function pintarMsgs(S){
+  const {sec,p}=S, auto=String(S.cli.estado||'').startsWith('ENVIADO');
+  if(sec==='alta'){
+    $(p+'-wa').innerHTML=waBox(S.cli.tel,S.cli.msg,{estado:S.cli.estado,ref:S.cli.ref,id:S.cli.id,sec,key:'cli',fin:true,hecho:S.done.cli});
+  }else{
+    $(p+'-wa').innerHTML=`<div class="paso">1️⃣ Al cliente · ${esc(S.cli.nombre)}${S.done.cli?' · ✅':''}</div>`+waBox(S.cli.tel,S.cli.msg,{estado:S.cli.estado,ref:S.cli.ref,id:S.cli.id,sec,key:'cli',hecho:S.done.cli})+
+      (S.ase?`<div class="paso" style="margin-top:18px">2️⃣ Al asesor · ${esc(S.ase.nombre)}${S.done.ase?' · ✅':''}</div>`+waBox(S.ase.cel,S.ase.msg,{sec,key:'ase',label:'📲 Enviar al asesor',fin:true,hecho:S.done.ase})
+        :`<div class="cli-box lock" style="display:block;margin-top:14px">⚠️ Este vendedor no tiene celular registrado en la hoja Vendedores.</div><div class="wabtns"><button class="btn fin" onclick="finalizar('${sec}')">✔ Finalizar</button></div>`);
+  }
   $(p+'-msgcard').style.display='block';
-  bloquear(sec,[...(auto?[]:['cli']),...(v&&v.Celular?['ase']:[])]);
+  bloquear(sec,[...(auto||S.done.cli?[]:['cli']),...(S.ase&&!S.done.ase?['ase']:[])]);
+}
+function restaurarPendMsg(){
+  const S=leerPendMsg(); if(!S||!S.sec||!S.cli) return;
+  if(Date.now()-(S.t||0)>24*3600*1000){ borrarPendMsg(); return; }
+  irA(S.sec); pintarMsgs(S);
+  setTimeout(()=>$(S.p+'-msgcard').scrollIntoView({behavior:'smooth',block:'start'}),300);
+  if(pendiente(S.sec)) toast('📲 Te faltan mensajes por enviar de tu último registro');
 }
 function finalizar(sec){
   if(pendiente(sec)){
@@ -714,6 +739,7 @@ function finalizar(sec){
     return toast('Primero envía o copia el mensaje '+f,true);
   }
   if(sec==='admin'){ cerrarModal(); return; }
+  borrarPendMsg();
   const p={alta:'a',compra:'c',canje:'k'}[sec];
   $(p+'-wa').innerHTML=''; $(p+'-msgcard').style.display='none';
   if(p!=='a') limpiarSel(p);
@@ -831,9 +857,8 @@ async function altaCliente(){
     tipoCliente:$('a-tipo').value,unidades:$('a-unid').value,rines:[...M.rin],medidas:[...M.med],marcas:[...M.mar]},$('b-alta'));
   if(!r) return;
   const c=cli(r.folio);
-  $('a-wa').innerHTML=waBox(c.Telefono,msgBienvenida(c),{estado:r.wa,ref:'CLI',id:c.Folio,sec:'alta',key:'cli',fin:true});
-  $('a-msgcard').style.display='block';
-  bloquear('alta',String(r.wa||'').startsWith('ENVIADO')?[]:['cli']);
+  const S={sec:'alta',p:'a',t:Date.now(),done:{},cli:{nombre:c.Nombre,tel:c.Telefono,msg:msgBienvenida(c),ref:'CLI',id:c.Folio,estado:r.wa},ase:null};
+  guardarPendMsg(S); pintarMsgs(S);
   ['a-nombre','a-tel','a-unid'].forEach(i=>$(i).value=''); medLimpiar('a');
   verA('a-msgcard');
 }
@@ -1349,6 +1374,7 @@ window.addEventListener('beforeunload',e=>{ if(pendiente('alta')||pendiente('com
 document.querySelectorAll('.zsel').forEach(s=>s.innerHTML='<option value="">TODAS</option>'+ZORD.map(z=>`<option>${z}</option>`).join(''));
 $('k-art').innerHTML=ARTICULOS.map(a=>`<option value="${a.nombre}">${a.nombre}${a.puntos?' · '+a.puntos+' pts':''}</option>`).join('');
 adminUI(); medRender('a'); precios(); ctRender(); ctBuscar();
+restaurarPendMsg();
 cargar();
 </script>
 </body>
