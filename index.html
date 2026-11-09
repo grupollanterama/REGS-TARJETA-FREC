@@ -510,7 +510,7 @@ body:has(#t-clientes.on) main{max-width:none}
 
 <script>
 /* ====== CONFIGURACIÓN ====== */
-const APP_VER = '2026-11-09-1500';   // cambia en cada actualización
+const APP_VER = '2026-11-09-1545';   // cambia en cada actualización
 const API_URL = 'https://script.google.com/macros/s/AKfycbwDeFwj4W8EBWeZP0o-IVuiTODuGP5rN8HWM4pdPiP1RAU5s8bFCs5rdlHbHONrfDaeOw/exec';
 const PROMO_URL = 'https://grupollanterama.github.io/PROMOCIONES-DEL-MES/';
 /* Catálogo de artículos promocionales (puntos de EJEMPLO, ajústalos) */
@@ -1305,9 +1305,12 @@ function invLineas(txt){
   while(L.length&&!L[L.length-1].trim()) L.pop();          // Excel deja un salto de línea al final
   return L.map(l=>{ l=l.trim(); if(/^".*"$/.test(l)) l=l.slice(1,-1).replace(/""/g,'"'); return l; });
 }
+/* La columna Descripción manda cuántos renglones son. En las demás, los vacíos (incluso al final) cuentan como «sin dato». */
 function invCuenta(){
-  const c=invCfg(INV.sel), ns=c.cols.map(([k])=>invLineas($('inv-'+k).value).length), mx=Math.max(...ns);
-  c.cols.forEach(([k],i)=>{ const e=$('inv-n-'+k); e.textContent=ns[i]+' renglones'+(ns[i]&&ns[i]!==mx?' ⚠️ no coincide':''); e.className=ns[i]&&ns[i]!==mx?'mal':''; });
+  const c=invCfg(INV.sel), iD=c.cols.findIndex(x=>x[2]===1), ns=c.cols.map(([k])=>invLineas($('inv-'+k).value).length), n=ns[iD];
+  c.cols.forEach(([k,t,tipo],i)=>{ const e=$('inv-n-'+k), mas=n&&ns[i]>n;
+    e.textContent=i===iD?ns[i]+' renglones':(mas?ns[i]+' renglones ⚠️ más que Descripción':ns[i]+' con dato'+(n&&ns[i]<n?' · los '+(n-ns[i])+' de abajo vacíos':''));
+    e.className=mas?'mal':''; });
   $('inv-out').innerHTML='';
 }
 function invLimpiar(){ invCfg(INV.sel).cols.forEach(([k])=>$('inv-'+k).value=''); invCuenta(); }
@@ -1315,12 +1318,14 @@ const invNum = s => { s=String(s||'').replace(/[$\s,]/g,''); if(s==='') return '
 /* Arma y valida los renglones. tipo: 0 texto · 1 descripción (obligatoria) · 2 número */
 function invArmar(){
   const c=invCfg(INV.sel), cols=c.cols.map(([k])=>invLineas($('inv-'+k).value));
-  const ns=cols.map(x=>x.length), n=Math.max(...ns), err=[], filas=[];
-  const iDesc=c.cols.findIndex(x=>x[2]===1);
-  if(!n) return {err:['Pega primero la información en los cuadros.']};
-  c.cols.forEach(([k,t,tipo],i)=>{ if(tipo===1&&!ns[i]) err.push('Falta pegar la columna «'+t+'».'); });
-  c.cols.forEach(([k,t],i)=>{ if(ns[i]&&ns[i]!==n) err.push(`La columna «${t}» tiene ${ns[i]} renglones y debería tener ${n}. Copia todas las columnas desde la misma primera llanta hasta la misma última.`); });
+  const ns=cols.map(x=>x.length), err=[], filas=[];
+  const iDesc=c.cols.findIndex(x=>x[2]===1), n=ns[iDesc];
+  if(!Math.max(...ns)) return {err:['Pega primero la información en los cuadros.']};
+  if(!n) return {err:['Falta pegar la columna «'+c.cols[iDesc][1]+'».']};
+  // Las otras columnas pueden tener vacíos al final (sin existencia / sin precio), pero NUNCA más renglones que Descripción
+  c.cols.forEach(([k,t],i)=>{ if(ns[i]>n) err.push(`La columna «${t}» tiene ${ns[i]} renglones y Descripción solo ${n}. Copia todas las columnas desde la misma primera llanta hasta la misma última.`); });
   if(err.length) return {err};
+  cols.forEach(x=>{ while(x.length<n) x.push(''); });
   // ¿Copiaron también el encabezado? (descripción tipo «DESCRIPCION» y número que no es número)
   let ini=0; const numIdx=c.cols.map((x,i)=>x[2]===2?i:-1).filter(i=>i>=0);
   if(/^DESCRIPCI/i.test(cols[iDesc][0]||'')||numIdx.some(i=>cols[i][0]&&isNaN(invNum(cols[i][0])))) ini=1;
