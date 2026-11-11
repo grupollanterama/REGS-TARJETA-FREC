@@ -510,7 +510,7 @@ body:has(#t-clientes.on) main{max-width:none}
 
 <script>
 /* ====== CONFIGURACIÓN ====== */
-const APP_VER = '2026-11-10-1830';   // cambia en cada actualización
+const APP_VER = '2026-11-10-1900';   // cambia en cada actualización
 const API_URL = 'https://script.google.com/macros/s/AKfycbwDeFwj4W8EBWeZP0o-IVuiTODuGP5rN8HWM4pdPiP1RAU5s8bFCs5rdlHbHONrfDaeOw/exec';
 const PROMO_URL = 'https://grupollanterama.github.io/PROMOCIONES-DEL-MES/';
 /* Catálogo de artículos promocionales (puntos de EJEMPLO, ajústalos) */
@@ -1314,7 +1314,8 @@ function invCuenta(){
   $('inv-out').innerHTML='';
 }
 function invLimpiar(){ invCfg(INV.sel).cols.forEach(([k])=>$('inv-'+k).value=''); invCuenta(); }
-const invNum = s => { s=String(s||'').replace(/[$\s,]/g,''); if(s==='') return ''; const n=Number(s); return isFinite(n)?n:NaN; };
+/* Números pegados de Excel: «$1,250.00», «1 250», «12.00». Vacío, guion (-, –, —, «$ -»), «N/A», «S/E» o cualquier texto sin números = 0 / sin dato */
+const invNum = s => { s=String(s??'').replace(/[$\s,\u00a0]/g,''); if(s==='') return ''; if(!/\d/.test(s)) return 0; const n=Number(s.replace(/^\((.*)\)$/,'-$1')); return isFinite(n)?n:NaN; };
 /* Arma y valida los renglones. tipo: 0 texto · 1 descripción (obligatoria) · 2 número */
 function invArmar(){
   const c=invCfg(INV.sel), cols=c.cols.map(([k])=>invLineas($('inv-'+k).value));
@@ -1328,16 +1329,18 @@ function invArmar(){
   cols.forEach(x=>{ while(x.length<n) x.push(''); });
   // ¿Copiaron también el encabezado? (descripción tipo «DESCRIPCION» y número que no es número)
   let ini=0; const numIdx=c.cols.map((x,i)=>x[2]===2?i:-1).filter(i=>i>=0);
-  if(/^DESCRIPCI/i.test(cols[iDesc][0]||'')||numIdx.some(i=>cols[i][0]&&isNaN(invNum(cols[i][0])))) ini=1;
-  const malos=[];
+  if(/^DESCRIPCI/i.test(cols[iDesc][0]||'')||numIdx.some(i=>/^(EXISTENCIA|EXIST|PRECIO|COSTO|STOCK|CANTIDAD|INVENTARIO)/i.test(cols[i][0]||''))) ini=1;
+  const malos=[]; let ceros=0;
   for(let r=ini;r<n;r++){
     const fila=c.cols.map(([k,t,tipo],i)=>{ const v=cols[i][r]??''; return tipo===2?invNum(v):v.toUpperCase().replace(/\s+/g,' ').trim(); });
     if(!fila[iDesc]){ if(fila.some(v=>v!==''&&v!==0)) malos.push(`Renglón ${r+1}: tiene datos pero no tiene descripción`); continue; }
-    c.cols.forEach(([k,t,tipo],i)=>{ if(tipo===2&&Number.isNaN(fila[i])) malos.push(`Renglón ${r+1} (${fila[iDesc]}): «${cols[i][r]}» no es un número en ${t}`); });
+    c.cols.forEach(([k,t,tipo],i)=>{ if(tipo!==2) return; const raw=String(cols[i][r]??'').trim();
+      if(Number.isNaN(fila[i])) malos.push(`Renglón ${r+1} (${fila[iDesc]}): «${raw}» no es un número en ${t}`);
+      else if(raw&&!/\d/.test(raw)) ceros++; });
     filas.push(fila);
   }
   if(malos.length) return {err:malos.slice(0,8).concat(malos.length>8?['… y '+(malos.length-8)+' más']:[])};
-  return {filas,encabezado:ini===1,iDesc};
+  return {filas,encabezado:ini===1,iDesc,ceros};
 }
 function invRevisar(){
   const a=invArmar(), out=$('inv-out');
@@ -1346,7 +1349,7 @@ function invRevisar(){
   const piezas=L.reduce((s,f)=>s+(Number(f[2])||0),0);
   const extra=` · <b>${L.filter(f=>f[3]>0).length}</b> con precio · ${L.filter(f=>!(f[3]>0)).length} sin precio`;
   const muestra=[...L.slice(0,5),...(L.length>8?[null]:[]),...L.slice(Math.max(5,L.length-3))];
-  out.innerHTML=`<div class="invres ok"><b>${L.length} llantas</b> · ${num(piezas).replace('.00','')} piezas${extra}${a.encabezado?'<br>Se brincó el primer renglón porque parece encabezado.':''}</div>
+  out.innerHTML=`<div class="invres ok"><b>${L.length} llantas</b> · ${num(piezas).replace('.00','')} piezas${extra}${a.encabezado?'<br>Se brincó el primer renglón porque parece encabezado.':''}${a.ceros?`<br>${a.ceros} celdas con guion o texto (–, N/A…) se tomaron como 0. Las vacías también cuentan como 0.`:''}</div>
     <table class="invtab"><tr>${c.cols.map(x=>`<th>${x[1]}</th>`).join('')}</tr>${muestra.map(f=>f?`<tr>${f.map((v,i)=>`<td>${c.cols[i][2]===2?(v===''?'—':num(v).replace('.00','')):esc(v)}</td>`).join('')}</tr>`:`<tr><td colspan="${c.cols.length}" class="muted">… ${L.length-8} más …</td></tr>`).join('')}</table>
     <p class="muted" style="margin-top:6px">Revisa que el primero y el último renglón tengan su descripción con la existencia correcta.</p>
     <button class="btn ok" id="b-inv-env" style="width:100%;margin-top:10px" onclick="invEnviar()">✅ Enviar ${L.length} llantas</button>`;
@@ -1374,13 +1377,16 @@ async function invEnviar(confirmado){
   }finally{ if(b) b.disabled=false; }
 }
 function invResultado(r){
+  const et=r.etiquetas||[], tit={}; et.forEach(([k,l,d])=>tit[k]=[l,d]);
+  const tabla=(cats,omitir=[])=>`<table class="invtab">${et.filter(([k])=>cats&&cats[k]&&!omitir.includes(k)).map(([k,l,d])=>`<tr><td style="white-space:nowrap"><b>${esc(l)}</b></td><td style="text-align:right"><b>${cats[k]}</b></td><td class="muted">${esc(d)}</td></tr>`).join('')}</table>`;
   let h=`<div class="invres ok"><b>✅ ${esc(r.mensaje)}</b> · ${num(r.piezas).replace('.00','')} piezas`;
-  if(r.destino==='LISTA') h+=`<br>${r.conPrecio} con precio · ${r.sinPrecio} sin precio<br><span style="font-size:12px">Existencias de sucursales conciliadas: ${r.resumen.map(esc).join(' · ')}</span></div>`;
-  else{
-    const dt=r.detalle||{cuenta:{},revisar:[],nRevisar:0}, k=dt.cuenta||{};
-    h+=`<br>${(k.EXACTO||0)+(k.PROBABLE||0)} encontradas en la lista de Ericka (con su precio) · ${dt.nuevas||0} nuevas que no están en su lista (precio calculado con tu costo)</div>`;
-    if(dt.nRevisar) h+=`<div class="invres av"><b>${dt.nRevisar} descripciones para revisar</b> (no coinciden igualito con la lista de Ericka):
-      <table class="invtab"><tr><th>Tu descripción</th><th>Exist.</th><th>Resultado</th></tr>${dt.revisar.map(x=>`<tr><td>${esc(x.desc)}</td><td>${x.exis}</td><td>${x.res==='PROBABLE'?'Se puso en: '+esc(x.cf):x.res==='DUDA'?'<b>No se puso</b>: '+esc(x.nota):'<b>No se puso</b>: '+esc(x.nota)}</td></tr>`).join('')}</table></div>`;
+  if(r.destino==='LISTA'){
+    h+=` · ${r.conPrecio} con precio · ${r.sinPrecio} sin precio</div><div class="invres av" style="background:#f6f8fd;color:var(--txt)"><b>Resultado con las existencias de todas las sucursales:</b>${tabla(r.totalCats)}</div>`;
+  } else {
+    const dt=r.detalle||{};
+    h+=`</div><div class="invres av" style="background:#f6f8fd;color:var(--txt)"><b>Resultado de tu carga:</b>${tabla(dt.cats,['SINEXIS'])}</div>`;
+    if(dt.nRevisar) h+=`<div class="invres av"><b>${dt.nRevisar} para revisar:</b>
+      <table class="invtab"><tr><th>Tu descripción</th><th>Exist.</th><th>Qué pasó</th></tr>${(dt.revisar||[]).map(x=>`<tr><td>${esc(x.desc)}</td><td>${x.exis}</td><td><b>${esc((tit[x.cat]||[x.cat])[0])}</b>${x.cf?'<br>Se puso en: '+esc(x.cf):''}${x.nota?'<br><span class="muted">'+esc(x.nota)+'</span>':''}</td></tr>`).join('')}</table></div>`;
   }
   $('inv-out').innerHTML=h;
 }
