@@ -459,7 +459,7 @@ body:has(#t-clientes.on) main{max-width:none}
 <section class="tab" id="t-inv">
   <div class="card" id="inv-lock" style="max-width:420px;margin:0 auto">
     <h2>📦 Cargar inventario</h2>
-    <p class="muted">Para Ericka (lista y precios), Alejandra (Pachuca) y Yuridia (Poza Rica y Tuxpan).</p>
+    <p class="muted">Para Ericka (lista y precios), Alejandra (Pachuca) y Leslie (Poza Rica y Tuxpan).</p>
     <label>Tu PIN</label><input type="password" inputmode="numeric" id="inv-pin" autocomplete="off" onkeyup="if(event.key==='Enter')invEntrar()">
     <br><br><button class="btn" style="width:100%" id="b-inv-in" onclick="invEntrar()">Entrar</button>
   </div>
@@ -510,7 +510,7 @@ body:has(#t-clientes.on) main{max-width:none}
 
 <script>
 /* ====== CONFIGURACIÓN ====== */
-const APP_VER = '2026-11-09-1545';   // cambia en cada actualización
+const APP_VER = '2026-11-10-1830';   // cambia en cada actualización
 const API_URL = 'https://script.google.com/macros/s/AKfycbwDeFwj4W8EBWeZP0o-IVuiTODuGP5rN8HWM4pdPiP1RAU5s8bFCs5rdlHbHONrfDaeOw/exec';
 const PROMO_URL = 'https://grupollanterama.github.io/PROMOCIONES-DEL-MES/';
 /* Catálogo de artículos promocionales (puntos de EJEMPLO, ajústalos) */
@@ -1241,12 +1241,12 @@ function detalle(folio){
 /* ---------- ADMIN ---------- */
 let ADMIN_PIN=null; try{ ADMIN_PIN=sessionStorage.getItem('cf-admin'); }catch(e){}
 const ADM={tab:'cli'};
-/* ---------- CARGAR INVENTARIO (Ericka · Alejandra · Yuridia) ---------- */
+/* ---------- CARGAR INVENTARIO (Ericka · Alejandra · Leslie) ---------- */
 const INVC={
   LISTA:{cols:[['marca','Marca',0],['desc','Descripción',1],['tul','Existencia Tulancingo',2],['precio','Precio Cliente Frecuente',2]],clase:'c4',
     ayuda:'Esta es <b>la lista que manda</b>: solo las llantas que pegues aquí se muestran en la app, con su precio. Copia desde tu Excel cada columna completa (de la primera llanta a la última) y pégala en su cuadro. <b>Reemplaza la lista anterior</b> (se guarda un respaldo).'},
-  TIENDA:{cols:[['desc','Descripción',1],['exis','Existencia',2]],clase:'c2',
-    ayuda:'Copia desde tu Excel la columna de <b>descripción</b> completa (de la primera llanta a la última) y pégala en el cuadro de la izquierda. Luego copia la columna de <b>existencia</b> (los mismos renglones) y pégala en el de la derecha. <b>Reemplaza tu inventario anterior.</b>'}
+  TIENDA:{cols:[['marca','Marca',0],['desc','Descripción',1],['exis','Existencia',2],['costo','Precio (costo con IVA)',2]],clase:'c4',
+    ayuda:'Copia desde tu Excel cada columna completa (de la primera llanta a la última) y pégala en su cuadro: <b>Marca · Descripción · Existencia · Precio costo con IVA</b>. Si una llanta no está en la lista de Ericka, la app calcula su precio cliente frecuente con tu costo. <b>Reemplaza tu inventario anterior.</b>'}
 };
 let INV={pin:null,nombre:'',destinos:[],sel:null,ult:null};
 try{ INV.pin=sessionStorage.getItem('cf-inv')||null; }catch(e){}
@@ -1343,8 +1343,8 @@ function invRevisar(){
   const a=invArmar(), out=$('inv-out');
   if(a.err){ out.innerHTML=`<div class="invres mal"><b>Hay que corregir antes de enviar:</b><br>${a.err.map(esc).join('<br>')}</div>`; return; }
   const c=invCfg(INV.sel), L=a.filas;
-  const piezas=L.reduce((s,f)=>s+(Number(f[INV.sel==='LISTA'?2:1])||0),0);
-  const extra=INV.sel==='LISTA'?` · <b>${L.filter(f=>f[3]>0).length}</b> con precio · ${L.filter(f=>!(f[3]>0)).length} sin precio`:'';
+  const piezas=L.reduce((s,f)=>s+(Number(f[2])||0),0);
+  const extra=` · <b>${L.filter(f=>f[3]>0).length}</b> con precio · ${L.filter(f=>!(f[3]>0)).length} sin precio`;
   const muestra=[...L.slice(0,5),...(L.length>8?[null]:[]),...L.slice(Math.max(5,L.length-3))];
   out.innerHTML=`<div class="invres ok"><b>${L.length} llantas</b> · ${num(piezas).replace('.00','')} piezas${extra}${a.encabezado?'<br>Se brincó el primer renglón porque parece encabezado.':''}</div>
     <table class="invtab"><tr>${c.cols.map(x=>`<th>${x[1]}</th>`).join('')}</tr>${muestra.map(f=>f?`<tr>${f.map((v,i)=>`<td>${c.cols[i][2]===2?(v===''?'—':num(v).replace('.00','')):esc(v)}</td>`).join('')}</tr>`:`<tr><td colspan="${c.cols.length}" class="muted">… ${L.length-8} más …</td></tr>`).join('')}</table>
@@ -1378,7 +1378,7 @@ function invResultado(r){
   if(r.destino==='LISTA') h+=`<br>${r.conPrecio} con precio · ${r.sinPrecio} sin precio<br><span style="font-size:12px">Existencias de sucursales conciliadas: ${r.resumen.map(esc).join(' · ')}</span></div>`;
   else{
     const dt=r.detalle||{cuenta:{},revisar:[],nRevisar:0}, k=dt.cuenta||{};
-    h+=`<br>${(k.EXACTO||0)+(k.PROBABLE||0)} encontradas en la lista de Ericka · ${k['NO ESTÁ EN LISTA CF']||0} no están en la lista (no se muestran: camión, otras marcas…)</div>`;
+    h+=`<br>${(k.EXACTO||0)+(k.PROBABLE||0)} encontradas en la lista de Ericka (con su precio) · ${dt.nuevas||0} nuevas que no están en su lista (precio calculado con tu costo)</div>`;
     if(dt.nRevisar) h+=`<div class="invres av"><b>${dt.nRevisar} descripciones para revisar</b> (no coinciden igualito con la lista de Ericka):
       <table class="invtab"><tr><th>Tu descripción</th><th>Exist.</th><th>Resultado</th></tr>${dt.revisar.map(x=>`<tr><td>${esc(x.desc)}</td><td>${x.exis}</td><td>${x.res==='PROBABLE'?'Se puso en: '+esc(x.cf):x.res==='DUDA'?'<b>No se puso</b>: '+esc(x.nota):'<b>No se puso</b>: '+esc(x.nota)}</td></tr>`).join('')}</table></div>`;
   }
