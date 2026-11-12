@@ -510,7 +510,7 @@ body:has(#t-clientes.on) main{max-width:none}
 
 <script>
 /* ====== CONFIGURACIÓN ====== */
-const APP_VER = '2026-11-10-1900';   // cambia en cada actualización
+const APP_VER = '2026-11-12-1700';   // cambia en cada actualización
 const API_URL = 'https://script.google.com/macros/s/AKfycbwDeFwj4W8EBWeZP0o-IVuiTODuGP5rN8HWM4pdPiP1RAU5s8bFCs5rdlHbHONrfDaeOw/exec';
 const PROMO_URL = 'https://grupollanterama.github.io/PROMOCIONES-DEL-MES/';
 /* Catálogo de artículos promocionales (puntos de EJEMPLO, ajústalos) */
@@ -1534,7 +1534,6 @@ async function revisarVersion(forzar){
     const txt=await fetch(location.pathname+'?v='+Date.now(),{cache:'no-store'}).then(r=>r.text());
     const m=txt.match(/const APP_VER = '([^']+)'/);
     if(m && m[1]!==APP_VER){
-      if('caches' in window){ for(const k of await caches.keys()) await caches.delete(k); }
       const reg='serviceWorker' in navigator && await navigator.serviceWorker.getRegistration();
       if(reg) await reg.update().catch(()=>{});
       if(!pendiente('alta')&&!pendiente('compra')&&!pendiente('canje')){ toast('🔄 Actualizando a la versión nueva…'); setTimeout(()=>location.reload(),800); }
